@@ -1,0 +1,226 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+        return isSignedIn() && (
+          request.auth.uid == 'wS9w7ysNYUajNsBYZ6C7n2Afe9H3' || 
+          request.auth.token.email == 'lek.26015@gmail.com' ||
+          request.auth.uid == '6rX3WqjNo9M7lX6iUe5V9r7Dk9z1' ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'admin')
+        );
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId) || isAdmin();
+
+      match /integrations/{integrationId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    match /lawyerProfiles/{lawyerId} {
+      allow read, list: if true;
+      allow create: if isOwner(request.resource.data.userId) || isAdmin();
+      allow update: if isOwner(resource.data.get('userId', null)) || isAdmin() || (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['averageRating', 'reviewCount']));
+      allow delete: if isOwner(resource.data.get('userId', null)) || isAdmin();
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    match /chats/{chatId} {
+      function isParticipant() {
+        return isSignedIn() && request.auth.uid in resource.data.participants;
+      }
+      
+      allow get, list: if isSignedIn(); // Broad access for now to fix dashbaord errors
+      allow create: if isSignedIn();
+      allow update: if isParticipant() || isAdmin();
+
+      match /messages/{messageId} {
+        function isChatParticipant() {
+          return exists(/databases/$(database)/documents/chats/$(chatId)) &&
+                 request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        }
+
+        allow get, list: if isChatParticipant() || isAdmin();
+        allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+    
+    match /articles/{articleId} {
+        allow read: if true;
+        allow write: if isAdmin();
+    }
+    
+    match /ads/{adId} {
+        allow read: if true;
+        allow write: if isAdmin();
+    }
+
+    match /appointments/{appointmentId} {
+        allow create: if isSignedIn();
+        allow read, list, update: if isOwner(resource.data.get('userId', null)) || isOwner(resource.data.get('lawyerId', null)) || isAdmin();
+    }
+
+    match /tickets/{ticketId} {
+        allow create: if isSignedIn();
+        allow read, list, update: if isOwner(resource.data.userId) || isAdmin();
+
+        match /messages/{messageId} {
+            allow read, list: if isAdmin() || (isSignedIn() && request.auth.uid == get(/databases/$(database)/documents/tickets/$(ticketId)).data.userId);
+            allow create: if isSignedIn();
+        }
+    }
+
+    match /withdrawals/{withdrawalId} {
+        allow create: if isSignedIn() && request.resource.data.lawyerId == request.auth.uid;
+        allow read, list, update: if isOwner(resource.data.get('lawyerId', null)) || isAdmin();
+    }
+
+    match /sme_inquiries/{inquiryId} {
+        allow create: if true; // Public contact form
+        allow read, update, delete: if isAdmin();
+    }
+
+    match /email_logs/{logId} {
+        allow read, write: if isAdmin();
+    }
+    match /notifications/{notificationId} {
+        allow create: if isSignedIn();
+        allow read: if isSignedIn() && (resource.data.recipient == request.auth.uid || resource.data.recipient == 'admin' || isAdmin());
+        allow update: if isSignedIn() && (resource.data.recipient == request.auth.uid || resource.data.recipient == 'admin' || isAdmin());
+    }
+    match /landingPages/{pageId} {
+        allow read: if true;
+        allow create, update, delete: if isAdmin();
+    }
+    
+    match /verifiedLawyers/{lawyerId} {
+        allow read: if true;
+        allow write: if isAdmin();
+    }
+
+    match /siteContent/{docId} {
+        allow read: if true;
+        allow write: if isAdmin();
+    }
+
+    match /contractRequests/{requestId} {
+        allow create: if true;
+        allow read, update, delete: if isAdmin();
+    }
+
+    match /registrationRequests/{requestId} {
+        allow create: if true;
+        allow read, update, delete: if isAdmin();
+    }
+
+    match /smeRequests/{requestId} {
+        allow create: if true;
+        allow read, update, delete: if isAdmin();
+    }
+
+    match /legalForms/{formId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['downloads']));
+    }
+
+    match /settings/{docId} {
+        allow read: if isSignedIn();
+        allow write: if isAdmin();
+    }
+
+    match /coupons/{couponId} {
+      allow read, list: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedCount']));
+    }
+
+    match /gpCoupons/{couponId} {
+      allow read, list: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin();
+    }
+
+    // --- B2B & CLM Rules ---
+
+    match /companies/{companyId} {
+      allow read: if isSignedIn() && (
+        resource.data.get('ownerId', null) == request.auth.uid || 
+        request.auth.uid in resource.data.get('adminUids', []) ||
+        isAdmin()
+      );
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.get('ownerId', null) == request.auth.uid || 
+        isAdmin()
+      );
+    }
+
+    match /contracts/{contractId} {
+      function canAccessContract() {
+        let userDocPath = /databases/$(database)/documents/users/$(request.auth.uid);
+        let hasUserDoc = exists(userDocPath);
+        let userDoc = hasUserDoc ? get(userDocPath).data : {};
+        let userCompanyId = hasUserDoc ? userDoc.get('companyId', null) : null;
+        let resourceCompanyId = resource.data.get('companyId', null);
+        
+        return isSignedIn() && (
+          request.auth.uid == resource.data.ownerId ||
+          (resourceCompanyId != null && userCompanyId != null && resourceCompanyId == userCompanyId) ||
+          isAdmin()
+        );
+      }
+
+      allow read: if canAccessContract();
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if canAccessContract();
+      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerId);
+    }
+
+    match /compliance_events/{eventId} {
+      function canAccessCompliance() {
+        let userDocPath = /databases/$(database)/documents/users/$(request.auth.uid);
+        let hasUserDoc = exists(userDocPath);
+        let userDoc = hasUserDoc ? get(userDocPath).data : {};
+        let userCompanyId = hasUserDoc ? userDoc.get('companyId', null) : null;
+        let resourceCompanyId = resource.data.get('companyId', null);
+        
+        return isSignedIn() && (
+          request.auth.uid == resource.data.ownerId ||
+          (resourceCompanyId != null && userCompanyId != null && resourceCompanyId == userCompanyId) ||
+          isAdmin()
+        );
+      }
+
+      allow read: if canAccessCompliance();
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if canAccessCompliance();
+      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerId);
+    }
+
+    // Default deny at the very end
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
