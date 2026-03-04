@@ -22,6 +22,13 @@ export interface UserProfile {
     notifyOnNewTicket: boolean;
     notifyOnPayment: boolean;
   };
+  subscription?: {
+    planId: 'free' | 'lite' | 'pro' | 'scale';
+    status: 'active' | 'past_due' | 'canceled' | 'unpaid';
+    currentPeriodEnd: any; // Firestore Timestamp
+    customerId: string; // Stripe Customer ID
+    subscriptionId: string; // Stripe Subscription ID
+  };
 }
 
 export interface LawyerProfile {

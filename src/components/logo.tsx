@@ -31,7 +31,7 @@ export default function Logo({ className, href, variant = 'color', showText = tr
               "text-xl font-bold font-headline transition-colors leading-none",
               variant === 'white' ? "text-white" : "text-foreground"
             )}>
-              Lawslane
+              capdeal
             </span>
           )}
           {subtitle && (

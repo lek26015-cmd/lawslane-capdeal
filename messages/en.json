@@ -1,116 +1,73 @@
 {
     "HomePage": {
         "hero": {
-            "title": "Consult Legal Problems with\nProfessional Lawyers",
-            "subtitle": "Platform connecting you with expert lawyers. Find the right lawyer or consult our AI smart lawyer immediately.",
-            "searchPlaceholder": "Search for lawyers, experts, or issues..."
-        },
-        "legalForms": {
-            "title": "Download Legal Forms for Free!!",
-            "description": "We are committed to gathering the most accurate and up-to-date legal forms to ensure your confidence in every transaction. Minimize legal risks with documents drafted by professional lawyers.",
-            "features": {
-                "professional": "Drafted by professional lawyers, legally compliant",
-                "update": "Latest updates, covering all contract types",
-                "free": "Free download, ready to use, easy to edit"
-            },
-            "cta": "Download All Forms"
-        },
-        "lawyerSearch": {
-            "title": "Find the Right Lawyer for You",
-            "description": "Consult with specialized lawyers. Easy to find, reliable, and ready for immediate consultation via video call or chat.",
-            "features": {
-                "verified": "Verified licensed lawyers",
-                "expert": "Expertise in various fields",
-                "review": "Transparent reviews and fees"
-            },
-            "cta": "Find a Lawyer"
-        },
-        "aiAnalysis": {
-            "title": "Not sure which lawyer you need?",
-            "description": "Let AI analyze your problem and recommend the right lawyer.",
-            "placeholder": "Describe your problem here, e.g., 'Fraud case', 'Company registration', 'Land dispute'",
-            "button": "Analyze & Recommend",
-            "analyzing": "Analyzing...",
-            "consultButton": "Consult AI Lawyer"
+            "badge": "AI Innovation for Secure and Fast Contracts",
+            "title": "Screenshot to Contract in 3 Seconds",
+            "subtitle": "Protect your business with smart AI that drafts contracts from chat images, with immediate professional legal network access.",
+            "viewPricing": "View Pricing Plans"
         },
         "mainFeatures": {
             "anywhere": {
-                "title": "Consult Anywhere",
-                "description": "Chat with lawyers instantly, wherever you are."
+                "title": "Real-time Analysis",
+                "description": "AI extracts key terms from your chat screenshots instantly."
             },
             "quality": {
-                "title": "Quality Lawyers",
-                "description": "All lawyers are verified for history and license."
+                "title": "Lawyer Verification",
+                "description": "Connect with verified lawyers to review your AI-generated contracts."
             },
             "privacy": {
                 "title": "Safe & Private",
-                "description": "Your case data is kept with highest confidentiality and security standards."
+                "description": "Your data is encrypted and handled with highest security standards."
             }
         },
-        "usageSteps": {
-            "label": "How It Works",
-            "title": "Easy, Convenient, and Fast"
-        },
-        "verifyStatus": {
-            "title": "Verify Lawyer Status",
-            "description": "For maximum confidence, you can instantly verify the license of every lawyer in our system via the Lawyers Council database.",
-            "button": "Verify Lawyer Status"
-        },
-        "smeSolution": {
-            "label": "For SME Business",
-            "title": "Legal Solutions for SME",
-            "description": "Reduce legal risks and help your business grow steadily with professional legal consulting services.",
-            "contract": "Draft & Review Contracts",
-            "consultant": "Corporate Legal Consultant",
-            "button": "View SME Services"
-        },
-        "recommendedLawyers": {
-            "title": "Recommended Lawyers",
-            "subtitle": "Experienced and specialized lawyers ready to provide consultation and handle your case closely.",
-            "loading": "Loading lawyers...",
-            "emptyTitle": "No recommended lawyers found",
-            "emptyDescription": "There are currently no recommended lawyers in the system. Please try again later.",
-            "viewAll": "View All Lawyers"
-        },
-        "services": {
-            "title": "Our Services",
-            "subtitle": "Lawlane offers a variety of legal services that are fast and transparent.",
-            "contracts": {
-                "title": "Draft & Review Contracts",
-                "description": "Drafting, reviewing, and amending all types of business contracts to close loopholes and protect your company's best interests."
+        "featuresShowcase": {
+            "title": "Designed for Simplicity",
+            "subtitle": "No need to learn a new way, use the apps you know instantly",
+            "card1": {
+                "title": "Easy to Use via LINE Chat",
+                "description": "Just send a screenshot of your conversation and let AI analyze the agreement terms instantly"
             },
-            "consultant": {
-                "title": "Corporate Legal Consultant",
-                "description": "Have a personal lawyer available for consultation at all times to help make business decisions based on legal correctness."
-            },
-            "registration": {
-                "title": "Registration & Licenses",
-                "description": "Handling company registration, memorandum amendments, and applying for various business licenses."
-            },
-            "dispute": {
-                "title": "Business Dispute Resolution",
-                "description": "Mediation and litigation in civil and commercial cases to protect your business rights and reputation."
+            "card2": {
+                "title": "AI-Powered Contract Generation",
+                "description": "AI automatically summarizes and drafts legally sound contracts from your chat context"
             }
         },
-        "articles": {
-            "title": "Legal Articles",
-            "loading": "Loading articles...",
-            "viewAll": "View All",
-            "readMore": "Read More",
-            "publishedAt": "Published",
-            "emptyTitle": "No articles found",
-            "emptyDescription": "There are currently no legal articles in the system. Please try again later."
+        "howItWorks": {
+            "title": "3 Simple Steps to Create a Contract",
+            "subtitle": "Turn complex legal matters into something simple with AI technology.",
+            "steps": {
+                "1": {
+                    "title": "1. Screenshot Chat",
+                    "description": "Just screenshot the conversation where you agreed on work, whether on Line, Messenger, or WhatsApp."
+                },
+                "2": {
+                    "title": "2. AI Analyzes Agreement",
+                    "description": "Our smart AI system will automatically pull key information like parties, price, deadlines, and terms."
+                },
+                "3": {
+                    "title": "3. Get Ready-to-use Contract",
+                    "description": "You'll get a legally sound contract draft, ready to download as PDF or send to your counterparty immediately."
+                }
+            },
+            "freeTier": "Start for free with 8 contracts per month"
         },
-        "forLawyersFooter": {
-            "title": "For Lawyers",
-            "description": "Join us to expand your client base and build online credibility.",
-            "button": "Apply as a Lawyer"
+        "features": {
+            "title": "Why Choose Lawslane CapDeal?",
+            "subtitle": "The smartest way to turn informal agreements into legally valid documents.",
+            "items": {
+                "pdf": {
+                    "title": "One-Click PDF",
+                    "description": "Generate and download your contract as a professional PDF instantly."
+                },
+                "chat": {
+                    "title": "Chat to Contract",
+                    "description": "Seamlessly support Line, Messenger, and other chat platforms."
+                }
+            }
         },
-        "stats": {
-            "faster": "Faster",
-            "experts": "Expert Lawyers",
-            "247": "24/7 Service",
-            "satisfaction": "Satisfaction"
+        "pricing": {
+            "title": "Simple, Transparent Pricing",
+            "subtitle": "Choose the plan that fits your needs. No hidden fees."
         },
         "capAndDeal": {
             "title": "Cap & Deal: Create Contracts from Chat",
@@ -121,6 +78,69 @@
                 "legal": "Legally valid and enforceable contracts"
             },
             "cta": "Start Cap & Deal Now"
+        },
+        "pricing_tiers": {
+            "free": {
+                "name": "Free",
+                "popular_tag": "FREE",
+                "description": "Ideal for individual beginners.",
+                "unit": "contracts/month",
+                "features": [
+                    "Analyze and create 8 contracts/month",
+                    "Support Line, Messenger, and other apps",
+                    "Draft basic legal agreements",
+                    "Download ready-to-use PDF"
+                ],
+                "cta": "Start for Free"
+            },
+            "lite": {
+                "name": "Lite",
+                "description": "Ideal for individuals or early-stage startups.",
+                "unit": "contracts/month",
+                "features": [
+                    "Analyze and create 30 contracts/month",
+                    "No Lawslane watermark on documents",
+                    "High-speed AI processing",
+                    "Unlimited contract history storage",
+                    "Support for long chat screenshots"
+                ],
+                "cta": "Get Started"
+            },
+            "pro": {
+                "name": "Pro",
+                "popular_tag": "MOST POPULAR",
+                "description": "Perfect for SMEs and small teams.",
+                "unit": "contracts/month",
+                "features": [
+                    "Analyze and create 100 contracts/month",
+                    "All features in Lite plan",
+                    "1 basic lawyer consultation/month",
+                    "Legal accuracy verification by experts",
+                    "Support for multi-party agreements"
+                ],
+                "cta": "Get Started"
+            },
+            "scale": {
+                "name": "Scale",
+                "description": "For growing businesses needing full management.",
+                "unit": "contracts/month",
+                "features": [
+                    "Analyze and create 1,000 contracts/month",
+                    "All features in Pro plan",
+                    "Unlimited lawyer contract verification",
+                    "Custom contract drafting on demand",
+                    "Contract management system for teams"
+                ],
+                "cta": "Get Started"
+            }
+        },
+        "pricing_common": {
+            "currency": "$",
+            "period": "/month",
+            "per_year": "USD/year",
+            "monthly": "Monthly",
+            "yearly": "Yearly",
+            "save_percent": "Save 20%"
         }
     },
     "NotFound": {
@@ -136,7 +156,28 @@
         "backHome": "Back to Home",
         "contactSales": "Contact Sales"
     },
+    "contactSection": {
+        "title": "Contact Us",
+        "subtitle": "If you have questions or need more information, our team is ready to help.",
+        "name": "Full Name",
+        "email": "Email",
+        "phone": "Phone Number",
+        "message": "Message",
+        "placeholder": {
+            "name": "Enter your name",
+            "email": "example@email.com",
+            "phone": "08x-xxx-xxxx",
+            "message": "Type your message here..."
+        },
+        "submit": "Send Message",
+        "submitting": "Sending...",
+        "successTitle": "Message Sent",
+        "successDesc": "We have received your message and will get back to you soon."
+    },
     "Navigation": {
+        "backToMain": "Back to Home",
+        "about": "About",
+        "services": "Services",
         "forSME": "For SME",
         "forB2B": "For Business",
         "b2bMenu": {
@@ -546,6 +587,8 @@
             "aiDisclaimer": "AI Disclaimer",
             "help": "Help Center"
         },
+        "capAndDeal": "Cap & Deal",
+        "pricing": "Pricing",
         "copyright": "© {year} Lawslane. All rights reserved."
     },
     "ContractsService": {

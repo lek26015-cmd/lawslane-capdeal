@@ -40,10 +40,8 @@ export default function Footer({ userRole, domainType = 'main' }: { userRole: st
 
   let quickLinks = [
     { href: `/${locale}`, label: t('quickLinks.home') },
-    { href: `/${locale}/about`, label: t('quickLinks.about') },
-    { href: `/${locale}/articles`, label: t('quickLinks.articles') },
-    { href: `/${locale}/lawyers`, label: t('quickLinks.findLawyer') },
-    { href: `/verify-lawyer`, label: t('quickLinks.verifyLawyer') },
+    { href: `/${locale}/services/contracts/screenshot`, label: t('capAndDeal') },
+    { href: `/${locale}/pricing`, label: t('pricing') },
   ];
 
   if (userRole === 'customer') {
@@ -85,7 +83,7 @@ export default function Footer({ userRole, domainType = 'main' }: { userRole: st
       <div className="container mx-auto px-4 md:px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div className="flex flex-col">
-            <Logo href={`/${locale}`} variant="white" className="text-white mb-4" />
+            <Logo href={`/${locale}`} variant="white" className="text-white mb-4" subtitle="by Lawslane" />
             <p className="text-sm text-gray-400 max-w-xs mb-4">
               {t('description')}
             </p>

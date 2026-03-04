@@ -34,6 +34,7 @@ import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '@/lib/constants';
 import { formatPhoneNumber, formatBankAccount } from '@/lib/utils';
 import Image from 'next/image';
 import { useTranslations, useLocale } from 'next-intl';
+import { SubscriptionCard } from '@/components/subscription/subscription-card';
 
 import bblLogo from '@/pic/logo-bank/กรุงเทพ.png';
 import kbankLogo from '@/pic/logo-bank/กสิกร.png';
@@ -712,6 +713,9 @@ export default function AccountPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Subscription Management */}
+          <SubscriptionCard />
 
           {/* Danger Zone */}
           <Card className="rounded-3xl shadow-sm border-destructive">

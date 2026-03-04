@@ -5,6 +5,7 @@ import { Link } from '@/navigation';
 import { contractService } from '@/services/contractService';
 import { useUser } from '@/firebase/provider';
 import { TurnstileWidget } from '@/components/turnstile-widget';
+import { useSubscription } from '@/hooks/useSubscription';
 
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
@@ -62,6 +63,7 @@ export default function ScreenshotToContractPage() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [contractData, setContractData] = useState<ContractData | null>(null);
     const [isCreating, setIsCreating] = useState(false);
+    const { isCapped, plan, isLoading: isSubLoading } = useSubscription();
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
@@ -169,6 +171,21 @@ export default function ScreenshotToContractPage() {
     const processImage = async () => {
         if (images.length === 0) return;
 
+        if (!user) {
+            setShowLoginDialog(true);
+            return;
+        }
+
+        if (isCapped) {
+            toast({
+                title: "ถึงขีดจำกัดแล้ว",
+                description: `แพ็กเกจ ${plan.name} สแกนได้สูงสุด ${plan.limits.dealsPerMonth} ครั้งต่อเดือน`,
+                variant: 'destructive',
+            });
+            router.push(`/${locale}/pricing`);
+            return;
+        }
+
         setIsProcessing(true);
         try {
             // Send all images
@@ -222,6 +239,16 @@ export default function ScreenshotToContractPage() {
         // Check if user is logged in
         if (!user) {
             setShowLoginDialog(true);
+            return;
+        }
+
+        if (isCapped) {
+            toast({
+                title: "ถึงขีดจำกัดแล้ว",
+                description: `แพ็กเกจ ${plan.name} สร้างได้สูงสุด ${plan.limits.dealsPerMonth} ครั้งต่อเดือน`,
+                variant: 'destructive',
+            });
+            router.push(`/${locale}/pricing`);
             return;
         }
 

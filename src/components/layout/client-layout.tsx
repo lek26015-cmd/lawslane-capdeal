@@ -4,8 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Header from '@/components/layout/header';
 import Footer from '@/components/layout/footer';
-import FloatingChatButton from '@/components/chat/floating-chat-button';
-import ChatModal from '@/components/chat/chat-modal';
 import CookieBanner from '@/components/cookie-banner';
 import { useUser as useAuthUser, useFirebase } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -68,8 +66,6 @@ export default function ClientLayout({
         <main className="flex-grow">{children}</main>
         {!isDashboardPage && <Footer userRole={userRole} domainType={activeDomainType} />}
       </div>
-      {isMounted && !isDashboardPage && <FloatingChatButton />}
-      {isMounted && !isDashboardPage && <ChatModal />}
       {isMounted && <CookieBanner />}
     </>
   );
