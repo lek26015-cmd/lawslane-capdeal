@@ -328,7 +328,10 @@ function LoginPageContent() {
                     body: JSON.stringify({ accessToken, idToken }),
                 });
 
-                if (!lineRes.ok) throw new Error('LINE authentication failed');
+                if (!lineRes.ok) {
+                    const errorResponse = await lineRes.json().catch(() => ({}));
+                    throw new Error(errorResponse.error || 'LINE authentication failed');
+                }
 
                 const lineContentType = lineRes.headers.get('content-type');
                 if (!lineContentType || !lineContentType.includes('application/json')) {
