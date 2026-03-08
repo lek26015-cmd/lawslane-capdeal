@@ -48,7 +48,7 @@ function PaymentPageContent() {
     const [paymentSuccess, setPaymentSuccess] = useState(false);
     const [promptPayPayload, setPromptPayPayload] = useState('');
     const [initialMessage, setInitialMessage] = useState(description || '');
-    const [activeTab, setActiveTab] = useState("bank-transfer");
+    const [activeTab, setActiveTab] = useState("promptpay");
     const [isWaitingForPayment, setIsWaitingForPayment] = useState(false);
     const [slipFile, setSlipFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -611,17 +611,11 @@ function PaymentPageContent() {
                         </div>
                     ) : (
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                            <TabsList className="grid w-full grid-cols-1">
-                                {/* <TabsTrigger value="credit-card" disabled={isWaitingForPayment}><CreditCard className="mr-2 h-4 w-4" /> บัตรเครดิต</TabsTrigger> */}
-                                {/* <TabsTrigger value="promptpay" disabled={isWaitingForPayment}><QrCode className="mr-2 h-4 w-4" /> PromptPay</TabsTrigger> */}
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="promptpay" disabled={isWaitingForPayment}><QrCode className="mr-2 h-4 w-4" /> PromptPay</TabsTrigger>
                                 <TabsTrigger value="bank-transfer" disabled={isWaitingForPayment}><Landmark className="mr-2 h-4 w-4" /> โอนเงิน</TabsTrigger>
                             </TabsList>
-                            <TabsContent value="credit-card" className="mt-4">
-                                <div className="text-center py-8 text-muted-foreground">
-                                    <p>ระบบตัดบัตรเครดิตอยู่ระหว่างการปรับปรุง</p>
-                                    <p>กรุณาเลือกช่องทาง "โอนเงิน" หรือ "PromptPay"</p>
-                                </div>
-                            </TabsContent>
+
                             <TabsContent value="promptpay" className="mt-4">
                                 <div className="flex flex-col items-center justify-center space-y-4 p-4 border rounded-md bg-white">
                                     {isWaitingForPayment ? (
@@ -688,7 +682,7 @@ function PaymentPageContent() {
                         </Tabs>
                     )}
                 </div>
-            </CardContent>
+            </CardContent >
         </Card >
     );
 }

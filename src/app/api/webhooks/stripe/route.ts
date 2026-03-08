@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
         switch (event.type) {
             case 'checkout.session.completed': {
                 const session = event.data.object as Stripe.Checkout.Session;
-                if (session.mode === 'subscription') {
-                    await handleSubscriptionCreatedOrUpdated(session);
+                if (session.mode === 'subscription' || session.mode === 'payment') {
+                    await handleCheckoutSessionCompleted(session);
                 }
                 break;
             }
@@ -51,31 +51,45 @@ export async function POST(req: NextRequest) {
     }
 }
 
-async function handleSubscriptionCreatedOrUpdated(session: Stripe.Checkout.Session) {
+async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
     const userId = session.metadata?.userId;
     const planId = session.metadata?.planId;
-    const subscriptionId = session.subscription as string;
+    const billingInterval = session.metadata?.billingInterval || 'month';
     const customerId = session.customer as string;
+    const subscriptionId = session.subscription as string;
 
     if (!userId || !planId) {
         console.error('Missing metadata in checkout session');
         return;
     }
 
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-
     const adminApp = await initAdmin();
     if (!adminApp) return;
     const adminDb = adminApp.firestore();
+
+    let currentPeriodEnd: Date;
+
+    if (session.mode === 'subscription' && subscriptionId) {
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        currentPeriodEnd = new Date((subscription as any).current_period_end * 1000);
+    } else {
+        // One-time payment (PromptPay)
+        const now = new Date();
+        if (billingInterval === 'year') {
+            currentPeriodEnd = new Date(now.setFullYear(now.getFullYear() + 1));
+        } else {
+            currentPeriodEnd = new Date(now.setMonth(now.getMonth() + 1));
+        }
+    }
 
     const userRef = adminDb.collection('users').doc(userId);
     await userRef.set({
         subscription: {
             planId: planId,
-            status: subscription.status,
-            currentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
+            status: 'active', // For one-time payments, we assume active if payment is successful
+            currentPeriodEnd: currentPeriodEnd,
             customerId: customerId,
-            subscriptionId: subscriptionId,
+            subscriptionId: subscriptionId || null,
         }
     }, { merge: true });
 }

@@ -66,14 +66,18 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
             try {
               // Try to verify session with backend
               const res = await fetch('/api/auth/session');
-              const data = await res.json();
-              if (data.authenticated) {
-                // We have a server session, but Firebase Client SDK doesn't have the user yet.
-                // Keep isUserLoading: true but store the basic info if needed.
-                // This prevents the dashboard from rendering and making Firestore calls 
-                // until the REAL Firebase Auth SDK has initialized and authenticated.
-                setUserAuthState(prev => ({ ...prev, user: { uid: data.uid, email: data.email } as any }));
-                return;
+
+              // Only parse if it's actually JSON
+              const contentType = res.headers.get('content-type');
+              if (res.ok && contentType && contentType.includes('application/json')) {
+                const data = await res.json();
+                if (data.authenticated) {
+                  // We have a server session, but Firebase Client SDK doesn't have the user yet.
+                  setUserAuthState(prev => ({ ...prev, user: { uid: data.uid, email: data.email } as any }));
+                  return;
+                }
+              } else {
+                console.warn("Session sync received non-JSON or error response:", res.status);
               }
             } catch (e) {
               console.error("Session sync failed:", e);

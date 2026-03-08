@@ -106,7 +106,7 @@ export function ContactSection() {
                                 </div>
                                 <div>
                                     <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Phone</p>
-                                    <p className="text-lg font-medium text-slate-900">02-xxx-xxxx</p>
+                                    <p className="text-lg font-medium text-slate-900">{t('phoneValue')}</p>
                                 </div>
                             </FadeIn>
 
@@ -116,7 +116,7 @@ export function ContactSection() {
                                 </div>
                                 <div>
                                     <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Office</p>
-                                    <p className="text-lg font-medium text-slate-900">Bangkok, Thailand</p>
+                                    <p className="text-lg font-medium text-slate-900">{t('officeValue')}</p>
                                 </div>
                             </FadeIn>
                         </div>

@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { CreditCard, Zap, ExternalLink, Loader2 } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { CreditCard, Zap, ExternalLink, Loader2, Wallet } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useUser } from '@/firebase';
 import { Link } from '@/navigation';
@@ -14,6 +15,7 @@ export function SubscriptionCard() {
     const { user } = useUser();
     const { plan, casesThisMonth, dealsLimit, isLoading, isActive, planId } = useSubscription();
     const [isPortalLoading, setIsPortalLoading] = useState(false);
+    const [isSetupLoading, setIsSetupLoading] = useState(false);
 
     const usagePercentage = Math.min((casesThisMonth / dealsLimit) * 100, 100);
     const isOverLimit = casesThisMonth >= dealsLimit;
@@ -29,14 +31,51 @@ export function SubscriptionCard() {
                 body: JSON.stringify({ userId: user.uid }),
             });
 
-            if (!response.ok) throw new Error('Failed to create portal session');
-
-            const { url } = await response.json();
-            window.location.href = url;
+            const contentType = response.headers.get('content-type');
+            if (response.ok && contentType && contentType.includes('application/json')) {
+                const { url } = await response.json();
+                window.location.href = url;
+            } else {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Failed to create portal session');
+            }
         } catch (error) {
             console.error('PORTAL_ERROR', error);
         } finally {
             setIsPortalLoading(false);
+        }
+    };
+
+    const handleLinkCard = async () => {
+        if (!user) return;
+
+        try {
+            if (isActive) {
+                // Active subscribers: use billing portal (includes payment method management)
+                await handleManageSubscription();
+                return;
+            }
+
+            // Non-subscribers: use setup intent flow
+            setIsSetupLoading(true);
+            const response = await fetch('/api/setup-intent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user.uid, email: user.email }),
+            });
+
+            const contentType = response.headers.get('content-type');
+            if (response.ok && contentType && contentType.includes('application/json')) {
+                const { url } = await response.json();
+                window.location.href = url;
+            } else {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Failed to create setup session');
+            }
+        } catch (error) {
+            console.error('SETUP_INTENT_ERROR', error);
+        } finally {
+            setIsSetupLoading(false);
         }
     };
 

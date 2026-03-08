@@ -30,6 +30,11 @@ export interface ContractData {
     ownerId: string;    // Creator of the contract
     category?: 'employment' | 'sales' | 'nda' | 'service' | 'other';
     notes?: string;
+    attachments?: {
+        name: string;
+        url: string;
+        type: string;
+    }[];
 
     // Structured Data from the Screenshot Parser
     employer: ContractParty;
@@ -153,6 +158,22 @@ export const contractService = {
             status,
             updatedAt: now
         });
+    },
+
+    // Update contract details (only allowed if not signed)
+    async updateContract(id: string, updates: Partial<Omit<ContractData, 'id' | 'createdAt' | 'updatedAt'>>) {
+        const { firestore } = initializeFirebase();
+        if (!firestore) throw new Error('Firestore not initialized');
+
+        const docRef = doc(firestore, COLLECTION_NAME, id);
+        const now = serverTimestamp();
+
+        const cleanedUpdates = cleanObject({
+            ...updates,
+            updatedAt: now
+        });
+
+        await updateDoc(docRef, cleanedUpdates);
     },
 
     // Add list method for CLM

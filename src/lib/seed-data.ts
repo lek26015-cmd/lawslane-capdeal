@@ -47,85 +47,15 @@ export const SAMPLE_ARTICLES = [
     }
 ];
 
-export const SAMPLE_LAWYERS = [
-    {
-        name: "ทนายสมชาย ใจดี",
-        email: "somchai@example.com",
-        phone: "081-234-5678",
-        specialties: ["กฎหมายแรงงาน", "กฎหมายแพ่ง"],
-        bio: "ทนายความผู้มีประสบการณ์ว่าความคดีแรงงานมากว่า 10 ปี ยินดีให้คำปรึกษาทุกปัญหาแรงงาน",
-        experience: 10,
-        education: "นิติศาสตรบัณฑิต มหาวิทยาลัยธรรมศาสตร์",
-        licenseNumber: "1234/2555",
-        province: "กรุงเทพมหานคร",
-        imageUrl: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=800",
-        imageHint: "lawyer-male",
-        status: "approved",
-        rating: 4.8,
-        reviewCount: 15,
-        pricing: {
-            appointmentFee: 3500,
-            chatFee: 500
-        },
-        joinedAt: new Date()
-    },
-    {
-        name: "ทนายวิภา เชี่ยวชาญ",
-        email: "wipa@example.com",
-        phone: "089-876-5432",
-        specialties: ["กฎหมายธุรกิจ", "ทรัพย์สินทางปัญญา"],
-        bio: "เชี่ยวชาญด้านการจดทะเบียนบริษัทและเครื่องหมายการค้า ให้คำปรึกษาธุรกิจ SME มาแล้วกว่า 100 ราย",
-        experience: 8,
-        education: "นิติศาสตรมหาบัณฑิต จุฬาลงกรณ์มหาวิทยาลัย",
-        licenseNumber: "5678/2558",
-        province: "นนทบุรี",
-        imageUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800",
-        imageHint: "lawyer-female",
-        status: "approved",
-        rating: 4.9,
-        reviewCount: 22,
-        pricing: {
-            appointmentFee: 4000,
-            chatFee: 600
-        },
-        joinedAt: new Date()
-    },
-    {
-        name: "ทนายกานดา มั่นคง",
-        email: "kanda@example.com",
-        phone: "086-111-2222",
-        specialties: ["กฎหมายครอบครัว", "มรดก"],
-        bio: "เข้าใจทุกปัญหาครอบครัว พร้อมดูแลด้วยความใส่ใจ รับทำพินัยกรรมและจัดการมรดก",
-        experience: 12,
-        education: "นิติศาสตรบัณฑิต มหาวิทยาลัยรามคำแหง",
-        licenseNumber: "9012/2553",
-        province: "เชียงใหม่",
-        imageUrl: "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=800",
-        imageHint: "lawyer-female-2",
-        status: "approved",
-        rating: 5.0,
-        reviewCount: 30,
-        pricing: {
-            appointmentFee: 3000,
-            chatFee: 500
-        },
-        joinedAt: new Date()
-    }
-];
-
 export async function seedDatabase(db: Firestore) {
     const results = {
         articles: 0,
-        lawyers: 0,
         errors: [] as string[]
     };
 
     // Seed Articles
     for (const article of SAMPLE_ARTICLES) {
         try {
-            // Check if slug exists to avoid duplicates (simple check)
-            // ideally we query, but for seed we can just addDoc or setDoc with slug as ID if we wanted.
-            // Let's just use addDoc for simplicity.
             await addDoc(collection(db, 'articles'), {
                 ...article,
                 publishedAt: Timestamp.fromDate(article.publishedAt),
@@ -134,28 +64,7 @@ export async function seedDatabase(db: Firestore) {
             });
             results.articles++;
         } catch (e: any) {
-            console.error("Error seeding article:", e);
             results.errors.push(`Article ${article.title}: ${e.message}`);
-        }
-    }
-
-    // Seed Lawyers
-    for (const lawyer of SAMPLE_LAWYERS) {
-        try {
-            // We'll use addDoc, but in reality lawyer ID usually comes from Auth UID.
-            // For display purposes on homepage, random ID is fine.
-            // But if we want to login as them, we need real Auth users.
-            // This seed is just for "Display" purposes.
-            await addDoc(collection(db, 'lawyerProfiles'), {
-                ...lawyer,
-                joinedAt: Timestamp.fromDate(lawyer.joinedAt),
-                createdAt: Timestamp.now(),
-                updatedAt: Timestamp.now()
-            });
-            results.lawyers++;
-        } catch (e: any) {
-            console.error("Error seeding lawyer:", e);
-            results.errors.push(`Lawyer ${lawyer.name}: ${e.message}`);
         }
     }
 

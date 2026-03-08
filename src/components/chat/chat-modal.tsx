@@ -27,6 +27,7 @@ const ChatRequestSchema = z.object({
     })
   ),
   prompt: z.string(),
+  locale: z.string().optional(),
 });
 
 const isChatResponse = (content: any): content is ChatResponse => {
@@ -151,8 +152,11 @@ export default function ChatModal() {
           body: JSON.stringify({ image: imagePayload }),
         });
 
-        if (!response.ok) throw new Error('Failed to process image');
-
+        const contentType = response.headers.get('content-type');
+        if (!response.ok || !contentType || !contentType.includes('application/json')) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Failed to generate contract draft');
+        }
         const data = await response.json();
 
         // Format the AI response

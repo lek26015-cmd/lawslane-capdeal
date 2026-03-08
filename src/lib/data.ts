@@ -712,7 +712,7 @@ export async function getFinancialStats(db: Firestore) {
     appointmentsSnapshot.docs.forEach(doc => {
       const data = doc.data();
       if (data.status !== 'pending' && data.status !== 'pending_payment' && data.status !== 'cancelled') {
-        const amount = 3500; // Fixed price for now
+        const amount = data.amount || 0; // Dynamic price from DB
         totalServiceValue += amount;
 
         const date = data.createdAt ? data.createdAt.toDate() : new Date();
@@ -730,7 +730,7 @@ export async function getFinancialStats(db: Firestore) {
       const data = doc.data();
       // Assuming chats created are paid if not 'pending_payment'
       if (data.status !== 'pending_payment') {
-        const amount = 500; // Fixed price
+        const amount = data.amount || 0; // Dynamic price from DB
         totalServiceValue += amount;
 
         const date = data.createdAt ? data.createdAt.toDate() : new Date();
@@ -791,7 +791,7 @@ export async function getLawyerStats(db: Firestore, lawyerId: string) {
 
     appointmentsSnapshot.docs.forEach(doc => {
       const data = doc.data();
-      const amount = 3500; // Fixed price
+      const amount = data.amount || 0; // Dynamic price from DB
       const lawyerShare = amount * 0.85; // 85% share
 
       totalIncome += lawyerShare;
@@ -807,7 +807,7 @@ export async function getLawyerStats(db: Firestore, lawyerId: string) {
     chatsSnapshot.docs.forEach(doc => {
       const data = doc.data();
       if (data.status === 'closed') {
-        const amount = 500; // Fixed price
+        const amount = data.amount || 0; // Dynamic price from DB
         const lawyerShare = amount * 0.85; // 85% share
 
         totalIncome += lawyerShare;

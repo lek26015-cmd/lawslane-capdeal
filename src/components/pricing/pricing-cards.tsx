@@ -33,40 +33,13 @@ export function PricingCards() {
             return;
         }
 
-        if (planId === 'free' && !isYearly) {
-            router.push('/dashboard');
+        if (planId === 'free') {
+            router.push('/services/contracts/screenshot');
             return;
         }
 
-        try {
-            setLoadingPlan(planId);
-            const res = await fetch('/api/checkout', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    planId,
-                    billingInterval: isYearly ? 'year' : 'month',
-                    userId: user.uid,
-                    customerEmail: user.email,
-                }),
-            });
-
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error);
-
-            if (data.url) {
-                window.location.href = data.url;
-            }
-        } catch (error: any) {
-            console.error('Checkout error:', error);
-            toast({
-                title: 'เกิดข้อผิดพลาด',
-                description: error.message || 'ไม่สามารถชำระเงินได้ในขณะนี้',
-                variant: 'destructive',
-            });
-        } finally {
-            setLoadingPlan(null);
-        }
+        const interval = isYearly ? 'year' : 'month';
+        router.push(`/checkout?planId=${planId}&interval=${interval}`);
     };
 
     // Filter out free plan from the carousel or showing only 3 main plans like the screenshot if needed

@@ -122,15 +122,7 @@ Always follow these steps:
 3.  If the tool returns "General Knowledge (Typhoon AI)", this means no specific legal document was found. Use this information to answer the user's question but explicitly state that it is general knowledge, not specific legal advice from the database.
 4.  If no information is found at all, answer based on your own general knowledge.
 5.  Always conclude your response by reminding the user that your analysis is for informational purposes only and they should consult with a qualified lawyer for formal advice.
-6.  **SERVICE RECOMMENDATIONS (CRITICAL)**:
-    -   **Contracts (Drafting/Review)**: If the user asks about drafting, reviewing, or creating contracts (agreements, MOUs, NDAs, etc.), you **MUST** recommend the "Contract Service" and provide this link: \`/services/contracts\`. Do NOT recommend finding a lawyer generally for this.
-    -   **Business Registration**: If the user asks about registering a company, partnership, or business entity, you **MUST** recommend the "Registration Service" and provide this link: \`/services/registration\`.
-    -   **SME Consulting/General Business**: If the user is an SME asking for general advice or has a business dispute, recommend the "SME Consultant" and provide this link: \`/b2b#contact\`.
-    -   **Find a Lawyer**: ONLY recommend "Find a Lawyer" (\`/lawyers\`) if:
-        -   The user explicitly asks to find a lawyer.
-        -   The issue involves **litigation**, **court proceedings**, **suing**, or **criminal cases**.
-        -   The issue is complex and does not fit into the specific services above.
-        -   **DO NOT** recommend finding a lawyer for every single query. Use it sparingly.
+6.  **Complex Legal Issues**: If the issue is complex and does not fit into the specific services above, advise the user to seek professional legal counsel from a specialized firm.
 7.  **CRITICAL**: In the **very first response** of the conversation, you **MUST** introduce yourself as the AI assistant for Lawslane AND explicitly state that your advice is preliminary and not a substitute for a lawyer (Limitation of Liability).
 8.  For all **subsequent messages** (after the first one), **DO NOT** introduce yourself, **DO NOT** say "Hello" or "Sawasdee", and **DO NOT** repeat the disclaimer. Answer the user's question directly and immediately.
 
@@ -204,60 +196,60 @@ async function fallbackChat(prompt: string, locale: string = 'th'): Promise<Chat
     const t = {
       th: {
         greetingTitle: "สวัสดีครับ (โหมดสำรอง)",
-        greetingContent: "สวัสดีครับ! ผมคือผู้ช่วย AI (ในโหมดสำรอง) เนื่องจากระบบหลักขัดข้อง ผมสามารถช่วยค้นหาข้อมูลกฎหมายเบื้องต้นจากฐานข้อมูลให้ได้ครับ ลองพิมพ์คำถามสั้นๆ เช่น 'มรดก', 'หย่า', หรือ 'สัญญา' ได้เลยครับ",
+        greetingContent: "สวัสดีครับ! ผมคือผู้ช่วย AI (ในโหมดสำรอง) ผมสามารถช่วยค้นหาข้อมูลกฎหมายและธุรกิจเบื้องต้นได้ครับ ลองพิมพ์คำถาม เช่น 'จดบริษัท', 'ภาษี', หรือ 'สัญญา' ได้เลยครับ",
         knowledgeTitle: "ข้อมูลจากฐานความรู้ (โหมดสำรอง)",
         knowledgeIntro: (terms: string) => `จากการค้นหาคำว่า "${terms}" พบข้อมูลที่เกี่ยวข้องดังนี้ครับ:`,
         relatedInfo: "ข้อมูลที่เกี่ยวข้อง",
         article: "บทความ",
         adviceTitle: "คำแนะนำเพิ่มเติม",
-        adviceContent: "ข้อมูลข้างต้นเป็นเพียงการค้นหาเบื้องต้นจากฐานข้อมูล แนะนำให้ปรึกษาทนายความเพื่อความถูกต้องครับ",
-        findLawyer: "ค้นหาทนายความผู้เชี่ยวชาญ",
+        adviceContent: "ข้อมูลข้างต้นเป็นเพียงการค้นหาเบื้องต้น แนะนำให้ศึกษาเพิ่มเติมหรือปรึกษาผู้เชี่ยวชาญครับ",
+        findLawyer: "ดูบริการของเรา",
         typhoonTitle: "คำตอบจาก AI (Typhoon)",
         typhoonAdviceTitle: "คำแนะนำ",
-        typhoonAdviceContent: "คำตอบนี้สร้างโดย AI (Typhoon) จากความรู้ทั่วไป อาจไม่ครอบคลุมกฎหมายเฉพาะเจาะจง แนะนำให้ปรึกษาทนายความ",
-        consultLawyerTitle: "แนะนำปรึกษาทนายความ",
-        consultLawyerContent: (p: string) => `สำหรับหัวข้อ "${p}" เป็นประเด็นทางกฎหมายที่อาจมีรายละเอียดซับซ้อนเฉพาะบุคคล\n\nเพื่อให้คุณได้รับคำแนะนำที่ถูกต้องและรัดกุมที่สุด ระบบขอแนะนำให้พูดคุยกับทนายความผู้เชี่ยวชาญโดยตรง เพื่อวิเคราะห์ข้อเท็จจริงในเชิงลึกครับ`,
-        consultLawyerBtn: "ปรึกษาทนายความ",
+        typhoonAdviceContent: "คำตอบนี้สร้างโดย AI อาจไม่ครอบคลุมรายละเอียดกฎหมายทั้งหมด แนะนำให้ใช้เป็นข้อมูลอ้างอิงเบื้องต้น",
+        consultLawyerTitle: "แนะนำบริการ",
+        consultLawyerContent: (p: string) => `สำหรับหัวข้อ "${p}" แนะนำให้ใช้บริการจัดการสัญญาหรือบริการจดทะเบียนธุรกิจของเราเพื่อความรัดกุมครับ`,
+        consultLawyerBtn: "ดูบริการทั้งหมด",
         errorTitle: "ระบบขัดข้องชั่วคราว",
-        errorContent: (msg: string) => `ขออภัยครับ ไม่สามารถเข้าถึงฐานข้อมูลได้ในขณะนี้ (${msg}) กรุณาลองใหม่อีกครั้ง หรือติดต่อเจ้าหน้าที่`
+        errorContent: (msg: string) => `ขออภัยครับ ไม่สามารถเข้าถึงข้อมูลได้ในขณะนี้ (${msg})`
       },
       en: {
         greetingTitle: "Hello (Backup Mode)",
-        greetingContent: "Hello! I am the AI Assistant (in backup mode). Since the main system is currently unavailable, I can help you search for preliminary legal information from our database. Try typing short keywords like 'Inheritance', 'Divorce', or 'Contract'.",
+        greetingContent: "Hello! I am the AI Assistant (in backup mode). I can help you find preliminary legal and business information. Try typing keywords like 'Registration', 'Tax', or 'Contract'.",
         knowledgeTitle: "Knowledge Base Results (Backup Mode)",
         knowledgeIntro: (terms: string) => `Based on your search for "${terms}", here is the relevant information found:`,
         relatedInfo: "Related Information",
         article: "Article",
         adviceTitle: "Additional Advice",
-        adviceContent: "The information above is a preliminary search from our database. We recommend consulting a lawyer for accuracy.",
-        findLawyer: "Find a Lawyer",
+        adviceContent: "The information above is a preliminary search. We recommend further research or consulting a professional.",
+        findLawyer: "View Our Services",
         typhoonTitle: "Answer from AI (Typhoon)",
         typhoonAdviceTitle: "Advice",
-        typhoonAdviceContent: "This answer was generated by AI (Typhoon) based on general knowledge and may not cover specific legal details. We recommend consulting a lawyer.",
-        consultLawyerTitle: "Consult a Lawyer",
-        consultLawyerContent: (p: string) => `Regarding "${p}", this is a legal issue that may have complex, case-specific details.\n\nTo receive the most accurate and comprehensive advice, we recommend speaking directly with a specialized lawyer to analyze the facts in depth.`,
-        consultLawyerBtn: "Consult a Lawyer",
+        typhoonAdviceContent: "This answer was generated by AI and may not cover all legal details. Please use it as preliminary information.",
+        consultLawyerTitle: "Our Services",
+        consultLawyerContent: (p: string) => `Regarding "${p}", we recommend checking our contract or registration services for more comprehensive solutions.`,
+        consultLawyerBtn: "View All Services",
         errorTitle: "Temporary System Error",
-        errorContent: (msg: string) => `Sorry, we cannot access the database at this time (${msg}). Please try again or contact support.`
+        errorContent: (msg: string) => `Sorry, we cannot access the data at this time (${msg}).`
       },
       zh: {
         greetingTitle: "你好 (备份模式)",
-        greetingContent: "你好！我是 AI 助手（备份模式）。由于主系统暂时不可用，我可以帮助您从我们的数据库中搜索初步的法律信息。尝试输入简短的关键词，如“继承”、“离婚”或“合同”。",
+        greetingContent: "你好！我是 AI 助手（备份模式）。我可以帮助您寻找初步的法律和业务信息。尝试输入关键词，如“注册”、“税务”或“合同”。",
         knowledgeTitle: "知识库结果 (备份模式)",
         knowledgeIntro: (terms: string) => `根据您搜索的 "${terms}"，以下是找到的相关信息：`,
         relatedInfo: "相关信息",
         article: "文章",
         adviceTitle: "额外建议",
-        adviceContent: "以上信息仅为数据库的初步搜索结果。为了准确起见，我们建议咨询律师。",
-        findLawyer: "寻找律师",
+        adviceContent: "以上信息仅为初步搜索结果。我们建议进一步研究或咨询专业人士。",
+        findLawyer: "查看我们的服务",
         typhoonTitle: "AI 回答 (Typhoon)",
         typhoonAdviceTitle: "建议",
-        typhoonAdviceContent: "此回答由 AI (Typhoon) 基于一般知识生成，可能不涵盖具体的法律细节。我们建议咨询律师。",
-        consultLawyerTitle: "咨询律师",
-        consultLawyerContent: (p: string) => `关于 "${p}"，这是一个可能涉及复杂具体细节的法律问题。\n\n为了获得最准确和全面的建议，我们建议直接与专业律师交谈，深入分析事实。`,
-        consultLawyerBtn: "咨询律师",
+        typhoonAdviceContent: "此回答由 AI 生成，可能不涵盖所有法律细节。请将其作为初步信息使用。",
+        consultLawyerTitle: "我们的服务",
+        consultLawyerContent: (p: string) => `关于“${p}”，我们建议查看我们的合同或注册服务以获得更全面的解决方案。`,
+        consultLawyerBtn: "查看所有服务",
         errorTitle: "系统暂时故障",
-        errorContent: (msg: string) => `抱歉，我们目前无法访问数据库 (${msg})。请重试或联系支持人员。`
+        errorContent: (msg: string) => `抱歉，我们目前无法访问数据 (${msg})。`
       }
     };
 
@@ -345,7 +337,7 @@ async function fallbackChat(prompt: string, locale: string = 'th'): Promise<Chat
       sections.push({
         title: strings.adviceTitle,
         content: strings.adviceContent,
-        link: "/lawyers",
+        link: "/services/contracts",
         linkText: strings.findLawyer
       });
     } else {

@@ -149,9 +149,9 @@ export default async function AboutPage({ params }: { params: Promise<{ locale: 
 
                                     {/* CTA */}
                                     <div className="pt-4 text-center lg:text-left">
-                                        <Link href="/lawyers">
+                                        <Link href="/services/contracts/screenshot">
                                             <Button size="lg" className="bg-[#0B3979] hover:bg-[#082a5a] h-12 px-8 text-lg rounded-full">
-                                                {t('findLawyer')}
+                                                แคปเลย! (Start Analysis)
                                                 <ArrowRight className="ml-2 w-5 h-5" />
                                             </Button>
                                         </Link>
@@ -339,9 +339,9 @@ export default async function AboutPage({ params }: { params: Promise<{ locale: 
                                 {t('cta.subtitle')}
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                <Link href="/lawyers">
+                                <Link href="/services/contracts/screenshot">
                                     <Button size="lg" className="bg-white text-blue-900 hover:bg-gray-100 text-lg font-semibold px-8">
-                                        {t('cta.button')}
+                                        เริ่มแคปเลย (Get Started)
                                         <ArrowRight className="ml-2 w-5 h-5" />
                                     </Button>
                                 </Link>

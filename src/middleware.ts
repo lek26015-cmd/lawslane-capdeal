@@ -68,23 +68,7 @@ export default async function middleware(request: NextRequest) {
         }
     }
 
-    // 0.5 Redirect localized lawyer routes to root
-    const localizedSystemRegex = /^\/[a-z]{2}\/(lawyer-)(.*)/;
-    if (localizedSystemRegex.test(pathname)) {
-        const newPath = pathname.replace(/^\/[a-z]{2}/, '');
-        return NextResponse.redirect(new URL(newPath, request.url));
-    }
-
-    // 1. Lawyer System Exclusion (No i18n)
-    if (pathname.startsWith('/lawyer-')) {
-
-        // For these systems, simply proceed without i18n
-        const response = NextResponse.next();
-        response.headers.set('Cross-Origin-Opener-Policy', 'unsafe-none');
-        return response;
-    }
-
-    // 2. Internationalization Middleware (Only for non-lawyer routes)
+    // 2. Internationalization Middleware
     const response = intlMiddleware(request);
 
     // Add Security Headers

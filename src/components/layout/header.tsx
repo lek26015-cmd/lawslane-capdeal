@@ -7,7 +7,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/logo';
 import { Input } from '@/components/ui/input';
-import { Search, Menu, User, ChevronDown, LogOut, LayoutDashboard, Camera } from 'lucide-react';
+import { Menu, User, ChevronDown, LogOut, LayoutDashboard, Camera } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -24,12 +24,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { doc, getDoc } from 'firebase/firestore';
-import profileLawyerImg from '@/pic/profile-lawyer.jpg';
-
 import { getMainLink, getBusinessLink } from '@/lib/domain-utils';
 
-
-export default function Header({ setUserRole, domainType = 'main' }: { setUserRole: (role: string | null) => void; domainType?: 'main' | 'lawyer' | 'admin' | 'business' }) {
+export default function Header({ setUserRole, domainType = 'main' }: { setUserRole: (role: string | null) => void; domainType?: 'main' | 'admin' | 'business' }) {
   const t = useTranslations('Navigation');
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -46,7 +43,6 @@ export default function Header({ setUserRole, domainType = 'main' }: { setUserRo
   const isSuperUser = user && (user.uid === 'N5ehLbkYXbQQLX5KEuwJbeL3cXO2' || user.uid === 'wS9w7ysNYUajNsBYZ6C7n2Afe9H3');
   const [role, setRole] = useState<string | null>(null);
   const isAdmin = role === 'admin' || isSuperUser;
-  const isLawyer = role === 'lawyer' || isSuperUser;
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
@@ -55,24 +51,16 @@ export default function Header({ setUserRole, domainType = 'main' }: { setUserRo
       if (!user || !firestore) return;
 
       try {
-        // 1. Check Lawyer Profile FIRST (Priority)
-        const lawyerDocRef = doc(firestore, "lawyerProfiles", user.uid);
-        const lawyerSnap = await getDoc(lawyerDocRef);
-
-        // Hotfix for specific user
-        if (lawyerSnap.exists() || user.uid === 'N5ehLbkYXbQQLX5KEuwJbeL3cXO2' || user.uid === 'wS9w7ysNYUajNsBYZ6C7n2Afe9H3') {
-          console.log("User is a lawyer:", user.uid);
-          setRole('lawyer');
-          setUserRole('lawyer');
-          setAvatarUrl(lawyerSnap.exists() ? lawyerSnap.data().imageUrl : user.photoURL);
-          return; // Exit early if lawyer
+        // Check User Profile
+        const userDocRef = doc(firestore, "users", user.uid);
+        let userSnap;
+        try {
+          userSnap = await getDoc(userDocRef);
+        } catch (e: any) {
+          console.warn("Permission denied for user profile:", e.message);
         }
 
-        // 2. Check User Profile
-        const userDocRef = doc(firestore, "users", user.uid);
-        const userSnap = await getDoc(userDocRef);
-
-        if (userSnap.exists()) {
+        if (userSnap && userSnap.exists()) {
           const data = userSnap.data();
           console.log("User is a regular user:", data.role);
           setRole(data.role || 'user');
@@ -180,17 +168,11 @@ export default function Header({ setUserRole, domainType = 'main' }: { setUserRo
             <a href="https://lawslane.com" target="_blank" rel="noopener noreferrer" className={navLinkClasses}>
               {t('backToMain')}
             </a>
-            <Link href={getMainLink('/about', domainType)} className={pathname.startsWith(`/about`) ? activeNavLinkClasses : navLinkClasses}>
-              {t('about')}
+            <Link href={getMainLink('/pricing', domainType)} className={pathname.startsWith(`/pricing`) ? activeNavLinkClasses : navLinkClasses}>
+              {t('pricing')}
             </Link>
-            <Link href={getMainLink('/services', domainType)} className={pathname.startsWith(`/services`) ? activeNavLinkClasses : navLinkClasses}>
+            <Link href={getMainLink('/services/contracts/screenshot', domainType)} className={pathname.startsWith(`/services`) ? activeNavLinkClasses : navLinkClasses}>
               {t('services')}
-            </Link>
-
-            {/* Search Lawyer with Icon */}
-            <Link href={getMainLink('/find-lawyer', domainType)} className={cn("flex items-center gap-2", navLinkClasses)}>
-              <Search className="h-5 w-5 stroke-[2.5]" />
-              <span>{t('findLawyer')}</span>
             </Link>
 
             {/* Vertical Divider */}
@@ -213,7 +195,7 @@ export default function Header({ setUserRole, domainType = 'main' }: { setUserRo
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className={cn("flex items-center gap-2 h-11 px-4 rounded-xl", loginButtonClasses)}>
                       <Avatar className="w-8 h-8">
-                        <AvatarImage src={avatarUrl || profileLawyerImg.src} />
+                        <AvatarImage src={avatarUrl || ""} />
                         <AvatarFallback>{user.displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <span className="hidden lg:inline">{user.displayName || user.email}</span>
@@ -226,6 +208,15 @@ export default function Header({ setUserRole, domainType = 'main' }: { setUserRo
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator className="bg-slate-50" />
 
+                    <DropdownMenuItem asChild className="rounded-lg py-2.5">
+                      <Link href="/dashboard" className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                          <LayoutDashboard className="w-4 h-4" />
+                        </div>
+                        <span>{t('dashboard')}</span>
+                      </Link>
+                    </DropdownMenuItem>
+
                     {isAdmin && (
                       <DropdownMenuItem asChild className="rounded-lg py-2.5">
                         <Link href="/admin" className="flex items-center gap-3">
@@ -233,28 +224,6 @@ export default function Header({ setUserRole, domainType = 'main' }: { setUserRo
                             <LayoutDashboard className="w-4 h-4" />
                           </div>
                           <span>{t('adminDashboard')}</span>
-                        </Link>
-                      </DropdownMenuItem>
-                    )}
-
-                    {(isLawyer || isSuperUser) && (
-                      <DropdownMenuItem asChild className="rounded-lg py-2.5">
-                        <NextLink href="/lawyer-dashboard" className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center text-green-600">
-                            <LayoutDashboard className="w-4 h-4" />
-                          </div>
-                          <span>{t('dashboard')}</span>
-                        </NextLink>
-                      </DropdownMenuItem>
-                    )}
-
-                    {(!isAdmin && !isLawyer || isSuperUser) && (
-                      <DropdownMenuItem asChild className="rounded-lg py-2.5">
-                        <Link href="/dashboard" className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
-                            <LayoutDashboard className="w-4 h-4" />
-                          </div>
-                          <span>{t('dashboard')}</span>
                         </Link>
                       </DropdownMenuItem>
                     )}
@@ -304,7 +273,7 @@ export default function Header({ setUserRole, domainType = 'main' }: { setUserRo
           {user ? (
             <Link href="/account">
               <Avatar className="w-8 h-8 border border-white/20">
-                <AvatarImage src={avatarUrl || profileLawyerImg.src} />
+                <AvatarImage src={avatarUrl || ""} />
                 <AvatarFallback>{user.displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
               </Avatar>
             </Link>
@@ -335,16 +304,18 @@ export default function Header({ setUserRole, domainType = 'main' }: { setUserRo
                 <nav className="flex flex-col gap-4 text-lg mt-6">
                   <a href="https://lawslane.com" target="_blank" rel="noopener noreferrer" className="hover:text-blue-400">{t('backToMain')}</a>
                   <Link href={getMainLink('/', domainType, !isMounted)} className="hover:text-blue-400">{t('home')}</Link>
-                  <Link href={getMainLink('/about', domainType)} className="hover:text-blue-400">{t('about')}</Link>
-                  <Link href={getMainLink('/services', domainType)} className="hover:text-blue-400">{t('services')}</Link>
-                  <Link href={getMainLink('/find-lawyer', domainType)} className="flex items-center gap-2 hover:text-blue-400">
-                    <Search className="h-5 w-5" />{t('findLawyer')}
-                  </Link>
+                  <Link href={getMainLink('/pricing', domainType)} className="hover:text-blue-400">{t('pricing')}</Link>
+                  <Link href={getMainLink('/services/contracts/screenshot', domainType)} className="hover:text-blue-400">{t('services')}</Link>
                 </nav>
                 <div className="border-t border-slate-800 pt-6 mt-auto">
                   {user ? (
                     <div className="space-y-4">
-                      {/* User dropdown content but vertical */}
+                      <Link href="/dashboard" className="block text-lg hover:text-blue-400">{t('dashboard')}</Link>
+                      {isAdmin && (
+                        <Link href="/admin" className="block text-lg font-bold text-blue-400">{t('adminDashboard')}</Link>
+                      )}
+                      <Link href="/account" className="block text-lg hover:text-blue-400">{t('manageAccount')}</Link>
+                      <button onClick={handleLogout} className="block text-lg text-red-400 hover:text-red-300 w-full text-left">{t('logout')}</button>
                     </div>
                   ) : (
                     <Link href="/login" className="block">

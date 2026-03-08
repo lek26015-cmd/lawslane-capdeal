@@ -18,7 +18,7 @@ service cloud.firestore {
           request.auth.token.email == 'lek.26015@gmail.com' ||
           request.auth.uid == '6rX3WqjNo9M7lX6iUe5V9r7Dk9z1' ||
           (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'admin')
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'user') == 'admin')
         );
     }
 
@@ -33,15 +33,21 @@ service cloud.firestore {
 
     match /lawyerProfiles/{lawyerId} {
       allow read, list: if true;
-      allow create: if isOwner(request.resource.data.userId) || isAdmin();
+      allow create: if isOwner(request.resource.data.get('userId', null)) || isAdmin();
       allow update: if isOwner(resource.data.get('userId', null)) || isAdmin() || (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['averageRating', 'reviewCount']));
       allow delete: if isOwner(resource.data.get('userId', null)) || isAdmin();
     }
 
     match /reviews/{reviewId} {
-      allow read: if true;
+      allow read, list: if true;
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+    
+    match /articleComments/{commentId} {
+      allow read, list: if true;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     match /chats/{chatId} {
@@ -103,10 +109,19 @@ service cloud.firestore {
     match /email_logs/{logId} {
         allow read, write: if isAdmin();
     }
+
     match /notifications/{notificationId} {
         allow create: if isSignedIn();
-        allow read: if isSignedIn() && (resource.data.recipient == request.auth.uid || resource.data.recipient == 'admin' || isAdmin());
-        allow update: if isSignedIn() && (resource.data.recipient == request.auth.uid || resource.data.recipient == 'admin' || isAdmin());
+        allow read: if isSignedIn() && (
+            resource.data.get('recipient', '') == request.auth.uid || 
+            resource.data.get('recipient', '') == 'admin' || 
+            isAdmin()
+        );
+        allow update: if isSignedIn() && (
+            resource.data.get('recipient', '') == request.auth.uid || 
+            resource.data.get('recipient', '') == 'admin' || 
+            isAdmin()
+        );
     }
     match /landingPages/{pageId} {
         allow read: if true;
@@ -191,9 +206,10 @@ service cloud.firestore {
         );
       }
 
-      allow read: if canAccessContract();
+      allow get: if true;
+      allow list: if canAccessContract();
       allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update: if canAccessContract();
+      allow update: if true;
       allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerId);
     }
 

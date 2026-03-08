@@ -142,6 +142,7 @@ export interface ArticleComment {
 export interface Case {
   id: string;
   title: string;
+  lawyerId?: string;
   lawyer: Pick<LawyerProfile, 'id' | 'name' | 'imageUrl' | 'imageHint'>;
   lastMessage: string;
   lastMessageTimestamp: string;
@@ -154,7 +155,8 @@ export interface Case {
 
 export interface UpcomingAppointment {
   id: string;
-  lawyer: Pick<LawyerProfile, 'name' | 'imageUrl' | 'imageHint'>;
+  lawyerId?: string;
+  lawyer: Pick<LawyerProfile, 'id' | 'name' | 'imageUrl' | 'imageHint'>;
   date: Date;
   description: string;
   time: string;

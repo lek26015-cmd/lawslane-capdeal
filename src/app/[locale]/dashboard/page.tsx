@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Calendar, Briefcase, FileText, Loader2, Search, MessageSquare, Building, FileUp, HelpCircle, CheckCircle, User, Ticket } from 'lucide-react';
+import { Calendar, Briefcase, FileText, Loader2, Search, MessageSquare, Building, FileUp, HelpCircle, CheckCircle, User, Ticket, Camera, FileSignature } from 'lucide-react';
 import type { Case, UpcomingAppointment, ReportedTicket } from '@/lib/types';
 import { format } from 'date-fns';
 import { th, enUS, zhCN } from 'date-fns/locale';
@@ -24,9 +24,8 @@ export default function DashboardPage() {
     const tHelp = useTranslations('Help');
     const locale = useLocale();
 
-    const [cases, setCases] = useState<Case[]>([]);
-    const [appointments, setAppointments] = useState<UpcomingAppointment[]>([]);
     const [tickets, setTickets] = useState<ReportedTicket[]>([]);
+    const [capDeals, setCapDeals] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     const dateLocale = locale === 'th' ? th : locale === 'zh' ? zhCN : enUS;
@@ -46,24 +45,34 @@ export default function DashboardPage() {
             if (user?.uid) {
                 try {
                     const data = await getUserDashboardData(user.uid);
-                    setCases(data.cases);
-                    setAppointments(data.appointments);
                     setTickets(data.tickets);
                 } catch (error) {
                     console.error("Error fetching dashboard data:", error);
-                    setCases([]);
-                    setAppointments([]);
                     setTickets([]);
                 }
+
+                // Fetch cap deals separately via API route (uses admin SDK)
+                try {
+                    const res = await fetch('/api/cap-deals', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: user.uid }),
+                    });
+                    if (res.ok) {
+                        const capData = await res.json();
+                        setCapDeals(capData.capDeals || []);
+                    }
+                } catch (err) {
+                    console.warn('Failed to fetch cap deals:', err);
+                }
             } else {
-                setCases([]);
-                setAppointments([]);
                 setTickets([]);
+                setCapDeals([]);
             }
             setIsLoading(false);
         }
         fetchData();
-    }, [isUserLoading, user, router, locale]); // Removed firestore from dependencies
+    }, [isUserLoading, user, router, locale]);
 
     if (isUserLoading || isLoading || !user) {
         return (
@@ -73,23 +82,11 @@ export default function DashboardPage() {
         );
     }
 
-    const activeCases = cases.filter(c => c.status === 'active' || c.status === 'pending_payment' || c.status === 'rejected' || c.status === 'approved' || c.status === 'pending');
-    const closedCases = cases.filter(c => c.status === 'closed');
-
-    // Filter appointments (show all, including pending_payment)
-    const visibleAppointments = appointments;
-
-    const caseColors: { [key: string]: string } = {
-        blue: 'border-l-4 border-blue-500',
-        yellow: 'border-l-4 border-yellow-500',
-        gray: 'border-l-4 border-gray-400',
-        red: 'border-l-4 border-red-500',
-    };
-
     const quickServices = [
-        { icon: <Search />, text: t('findLawyer'), href: `/${locale}/lawyers` },
-        { icon: <MessageSquare />, text: t('bookConsultation'), href: `/${locale}/lawyers` },
-        { icon: <User />, text: t('managePersonalInfo'), href: `/${locale}/account` },
+        { icon: <Camera />, text: '📸 แคปแล้วดีล', href: `/${locale}/services/contracts/screenshot` },
+        { icon: <FileText />, text: 'เอกสารกฎหมาย', href: `/${locale}/forms` },
+        { icon: <MessageSquare />, text: 'AI ที่ปรึกษา', href: `/${locale}/ai-advisor` },
+        { icon: <User />, text: 'ข้อมูลส่วนตัว', href: `/${locale}/account` },
     ];
 
     return (
@@ -99,137 +96,62 @@ export default function DashboardPage() {
 
                     {/* Main Content */}
                     <div className="lg:col-span-2 space-y-6">
-                        {/* Upcoming Appointments */}
+                        {/* Cap Deal - Recent Contracts */}
                         <Card className="rounded-3xl shadow-sm border-none">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 font-bold">
-                                    <Calendar className="w-5 h-5" />
-                                    {t('upcomingAppointments')}
+                                    <FileSignature className="w-5 h-5" />
+                                    แคปดีล — สัญญาล่าสุด
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                {visibleAppointments.length > 0 ? (
-                                    <div className="space-y-4">
-                                        {visibleAppointments.map((appt) => (
-                                            <div key={appt.id} className="flex items-center justify-between p-4 rounded-3xl bg-green-50 border border-green-200">
-                                                <div>
-                                                    <p className="font-semibold text-green-900 flex items-center gap-2">
-                                                        {appt.description || t('defaultAppointmentDescription')}
-                                                        {appt.status === 'pending' && (
-                                                            <Badge variant="outline" className="text-yellow-700 border-yellow-600 bg-yellow-50">
-                                                                รอทนายตอบรับ
-                                                            </Badge>
-                                                        )}
-                                                        {appt.status === 'pending_payment' && (
-                                                            <Badge variant="outline" className="text-red-700 border-red-600 bg-red-50">
-                                                                รอชำระเงิน
-                                                            </Badge>
-                                                        )}
-                                                    </p>
-                                                    <p className="text-sm text-green-700">
-                                                        {t('appointmentWith')}: {appt.lawyer.name} | {t('date')}: {format(appt.date, 'dd MMM yyyy', { locale: dateLocale })} | {t('time')}: {appt.time}
-                                                    </p>
-                                                </div>
-                                                <Button asChild size="sm" className="bg-foreground hover:bg-foreground/90 text-background rounded-full">
-                                                    <Link href={`/${locale}/appointment/${appt.id}`}>{t('viewDetails')}</Link>
-                                                </Button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-8 text-muted-foreground">
-                                        <Calendar className="mx-auto h-10 w-10 mb-2" />
-                                        <p>{t('noAppointments')}</p>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        {/* Ongoing Cases */}
-                        <Card className="rounded-3xl shadow-sm border-none">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 font-bold">
-                                    <Briefcase className="w-5 h-5" />
-                                    {t('ongoingCases')}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                {activeCases.length > 0 ? (
+                                {capDeals.length > 0 ? (
                                     <div className="space-y-3">
-                                        {activeCases
-                                            .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-                                            .map((caseItem) => (
-                                                <Link href={caseItem.status === 'rejected' ? '#' : `/${locale}/chat/${caseItem.id}?lawyerId=${caseItem.lawyer.id}`} key={caseItem.id} className={caseItem.status === 'rejected' ? 'cursor-default' : ''}>
-                                                    <div className={`flex items-center justify-between p-4 rounded-3xl bg-card ${caseItem.status === 'rejected' ? caseColors['red'] : caseColors['blue']}`}>
-                                                        <div>
-                                                            <p className="font-semibold flex items-center gap-2 flex-wrap">
-                                                                {caseItem.title || t('defaultCaseTitle')}
-                                                                <span className="font-mono text-xs text-muted-foreground">({caseItem.id})</span>
-                                                                {caseItem.status === 'pending_payment' && (
-                                                                    <Badge variant="outline" className="text-yellow-600 border-yellow-600 bg-yellow-50">
-                                                                        รอตรวจสอบสลิป
-                                                                    </Badge>
-                                                                )}
-                                                                {caseItem.status === 'rejected' && (
-                                                                    <Badge variant="destructive">
-                                                                        คำขอถูกปฏิเสธ
-                                                                    </Badge>
-                                                                )}
-                                                            </p>
-                                                            {caseItem.status === 'rejected' && caseItem.rejectReason && (
-                                                                <p className="text-sm text-red-600 mt-1">
-                                                                    เหตุผล: {caseItem.rejectReason}
-                                                                </p>
-                                                            )}
-                                                            <p className="text-sm text-muted-foreground">{caseItem.lastMessage}</p>
-                                                        </div>
-                                                        <div className="flex items-center gap-3">
-                                                            {caseItem.hasNewMessage && (
-                                                                <span className="flex h-3 w-3 rounded-full bg-red-600 animate-pulse" />
-                                                            )}
-                                                            {caseItem.status !== 'rejected' && (
-                                                                <Button size="sm" className="bg-foreground hover:bg-foreground/90 text-background rounded-full">{t('viewDetails')}</Button>
-                                                            )}
-                                                        </div>
+                                        {capDeals.map((deal: any) => (
+                                            <Link href={`/${locale}/contract/${deal.id}`} key={deal.id}>
+                                                <div className="flex items-center justify-between p-4 rounded-3xl bg-blue-50 border border-blue-100 hover:bg-blue-100/50 transition-colors">
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-semibold text-blue-900 truncate flex items-center gap-2">
+                                                            {deal.title || 'สัญญาจ้างทำของ'}
+                                                            <Badge variant="outline" className={`text-xs ${deal.status === 'signed' ? 'text-green-700 border-green-600 bg-green-50' :
+                                                                deal.status === 'draft' ? 'text-slate-600 border-slate-400 bg-slate-50' :
+                                                                    'text-blue-700 border-blue-600 bg-blue-50'
+                                                                }`}>
+                                                                {deal.status === 'signed' ? 'เซ็นแล้ว' : deal.status === 'draft' ? 'ร่าง' : deal.status === 'pending' ? 'อยากเซ็น' : deal.status}
+                                                            </Badge>
+                                                        </p>
+                                                        <p className="text-sm text-blue-700 truncate">
+                                                            {deal.task ? `งาน: ${deal.task.substring(0, 50)}${deal.task.length > 50 ? '...' : ''}` : 'ไม่มีรายละเอียด'}
+                                                            {deal.price ? ` | ราคา: ${Number(deal.price).toLocaleString()} บาท` : ''}
+                                                        </p>
                                                     </div>
-                                                </Link>
-                                            ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-8 text-muted-foreground">
-                                        <Briefcase className="mx-auto h-10 w-10 mb-2" />
-                                        <p>{t('noActiveCases') || "ยังไม่มีรายการปรึกษา"}</p>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        {/* Closed Cases */}
-                        {closedCases.length > 0 && (
-                            <Card className="rounded-3xl shadow-sm border-none">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2 font-bold">
-                                        <CheckCircle className="w-5 h-5 text-green-600" />
-                                        {t('closedCases')}
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-3">
-                                        {closedCases.map((caseItem) => (
-                                            <Link href={`/${locale}/chat/${caseItem.id}?lawyerId=${caseItem.lawyer.id}&status=closed`} key={caseItem.id}>
-                                                <div className={`flex items-center justify-between p-4 rounded-3xl bg-gray-50 ${caseColors.gray}`}>
-                                                    <div>
-                                                        <p className="font-semibold">{caseItem.title || t('defaultCaseTitle')} <span className="font-mono text-xs text-muted-foreground">({caseItem.id})</span></p>
-                                                        <p className="text-sm text-muted-foreground">{caseItem.lastMessage}</p>
-                                                    </div>
-                                                    <Badge variant="outline">{t('viewHistory')}</Badge>
+                                                    <Button size="sm" className="bg-foreground hover:bg-foreground/90 text-background rounded-full ml-3 shrink-0">ดูสัญญา</Button>
                                                 </div>
                                             </Link>
                                         ))}
+                                        <div className="text-center pt-2">
+                                            <Link href={`/${locale}/services/contracts/screenshot`}>
+                                                <Button variant="outline" className="rounded-full">
+                                                    <Camera className="w-4 h-4 mr-2" />
+                                                    สร้างสัญญาใหม่
+                                                </Button>
+                                            </Link>
+                                        </div>
                                     </div>
-                                </CardContent>
-                            </Card>
-                        )}
+                                ) : (
+                                    <div className="text-center py-8 text-muted-foreground">
+                                        <FileSignature className="mx-auto h-10 w-10 mb-2" />
+                                        <p>ยังไม่มีสัญญาที่สร้างจากแคปดีล</p>
+                                        <Link href={`/${locale}/services/contracts/screenshot`}>
+                                            <Button className="mt-4 rounded-full">
+                                                <Camera className="w-4 h-4 mr-2" />
+                                                เริ่มแคปแล้วดีลเลย!
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
 
 
                     </div>

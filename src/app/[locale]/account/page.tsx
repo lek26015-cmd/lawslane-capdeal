@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, User, Lock, Bell, ShieldAlert, Loader2, X } from 'lucide-react';
+import { ArrowLeft, User, Lock, Bell, ShieldAlert, Loader2, X, CreditCard } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { THAI_PROVINCES } from '@/lib/thai-provinces';
 import {
@@ -88,6 +88,8 @@ export default function AccountPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isAddingCard, setIsAddingCard] = useState(false);
+
 
   const [profileData, setProfileData] = useState({
     name: '',
@@ -176,6 +178,8 @@ export default function AccountPage() {
 
     fetchUserData();
   }, [firestore, user, toast, t]);
+
+
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -717,7 +721,7 @@ export default function AccountPage() {
           {/* Subscription Management */}
           <SubscriptionCard />
 
-          {/* Danger Zone */}
+
           <Card className="rounded-3xl shadow-sm border-destructive">
             <CardHeader className="flex items-center gap-4">
               <ShieldAlert className="w-6 h-6 text-destructive" />

@@ -12,6 +12,7 @@ interface ContractData {
     deposit: number;
     deadline: string;
     paymentTerms: string;
+    attachments?: { name: string; url: string; type: string; }[];
 }
 
 // Format Thai date
@@ -270,6 +271,13 @@ export function generateContractPDF(data: ContractData) {
     <p class="clause-title">ข้อ 4. การบอกเลิกสัญญา</p>
     <p>หากผู้รับจ้างไม่สามารถทำงานให้แล้วเสร็จตามกำหนด หรือเจตนาทิ้งงาน ผู้ว่าจ้างมีสิทธิบอกเลิกสัญญาและเรียกร้องค่าเสียหายได้ทันที</p>
     
+    ${data.attachments && data.attachments.length > 0 ? `
+    <p class="clause-title">เอกสารแนบท้ายสัญญา</p>
+    <ul style="padding-left: 20px;">
+        ${data.attachments.map(file => `<li>${file.name}</li>`).join('')}
+    </ul>
+    ` : ''}
+
     <div class="signatures">
         <div class="signature-block">
             <div class="signature-line ${employerSignature ? 'signed' : ''}">

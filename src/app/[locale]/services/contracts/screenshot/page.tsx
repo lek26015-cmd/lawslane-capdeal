@@ -135,29 +135,75 @@ export default function ScreenshotToContractPage() {
 
     const allConsentsAccepted = acceptPrivacy && acceptTerms && acceptAiDisclaimer && turnstileToken;
 
-    // Handle clicking upload button - show consent first if not accepted
+    // Handle clicking upload button - allow direct upload, consent is checked later
     const handleUploadClick = () => {
-        if (!allConsentsAccepted) {
-            setShowPdpaDialog(true);
-            return;
-        }
         fileInputRef.current?.click();
     };
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (files && files.length > 0) {
             setContractData(null); // Reset previous data when new images are uploaded
 
-            Array.from(files).forEach(file => {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    if (reader.result) {
-                        setImages(prev => [...prev, reader.result as string]);
+            for (const file of Array.from(files)) {
+                try {
+                    // Create an Image object
+                    const img = new Image();
+                    img.src = URL.createObjectURL(file);
+
+                    await new Promise((resolve, reject) => {
+                        img.onload = resolve;
+                        img.onerror = reject;
+                    });
+
+                    // Calculate new dimensions (max 1200px on longest side)
+                    const MAX_DIMENSION = 1200;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_DIMENSION) {
+                            height = Math.round((height *= MAX_DIMENSION / width));
+                            width = MAX_DIMENSION;
+                        }
+                    } else {
+                        if (height > MAX_DIMENSION) {
+                            width = Math.round((width *= MAX_DIMENSION / height));
+                            height = MAX_DIMENSION;
+                        }
                     }
-                };
-                reader.readAsDataURL(file);
-            });
+
+                    // Draw to canvas
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0, width, height);
+                        // Compress as JPEG with 0.7 quality
+                        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                        setImages(prev => [...prev, compressedDataUrl]);
+                    } else {
+                        // Fallback if canvas fails
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            if (reader.result) setImages(prev => [...prev, reader.result as string]);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+
+                    URL.revokeObjectURL(img.src);
+                } catch (error) {
+                    console.error("Error compressing image:", error);
+                    // Fallback to uncompressed
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        if (reader.result) setImages(prev => [...prev, reader.result as string]);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
         }
     };
 
@@ -188,25 +234,44 @@ export default function ScreenshotToContractPage() {
 
         setIsProcessing(true);
         try {
-            // Send all images
             const response = await fetch('/api/ai/contract-draft', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ images, locale }), // Send array of images and locale
+                body: JSON.stringify({ images, locale }),
             });
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || 'Failed to process images');
-            }
+            const contentType = response.headers.get('content-type');
+            if (response.ok && contentType && contentType.includes('application/json')) {
+                const data = await response.json();
+                setContractData(data);
+            } else {
+                let errorMessage = 'ไม่สามารถสร้างสัญญาจากรูปภาพได้ โปรดลองอีกครั้ง';
+                const errorText = await response.text();
 
-            const data = await response.json();
-            setContractData(data);
+                try {
+                    const errorData = JSON.parse(errorText);
+                    if (errorData && typeof errorData.error === 'string') {
+                        errorMessage = errorData.error;
+                    }
+                } catch {
+                    if (response.status === 413) {
+                        errorMessage = 'ไฟล์รูปภาพมีขนาดใหญ่เกินไป กรุณาอัปโหลดรูปภาพที่มีขนาดเล็กลง';
+                    } else if (response.status === 404) {
+                        errorMessage = 'ไม่พบระบบบริการ AI ในขณะนี้';
+                    }
+                }
+
+                toast({
+                    title: "เกิดข้อผิดพลาด",
+                    description: errorMessage,
+                    variant: "destructive"
+                });
+            }
         } catch (error: any) {
             console.error('Processing error:', error);
             toast({
                 title: "เกิดข้อผิดพลาด",
-                description: error.message || "ไม่สามารถสร้างสัญญาจากรูปภาพได้ โปรดลองอีกครั้ง",
+                description: error.message || "ไม่สามารถติดต่อเซิร์ฟเวอร์ได้",
                 variant: "destructive"
             });
         } finally {
@@ -257,11 +322,18 @@ export default function ScreenshotToContractPage() {
 
     const handleLoginRedirect = () => {
         // Save current data to sessionStorage before redirect
-        if (contractData) {
-            sessionStorage.setItem(CONTRACT_DATA_KEY, JSON.stringify(contractData));
-        }
-        if (images.length > 0) {
-            sessionStorage.setItem(IMAGES_KEY, JSON.stringify(images));
+        try {
+            if (contractData) {
+                sessionStorage.setItem(CONTRACT_DATA_KEY, JSON.stringify(contractData));
+            }
+            if (images.length > 0) {
+                sessionStorage.setItem(IMAGES_KEY, JSON.stringify(images));
+            }
+        } catch (error) {
+            console.warn('Failed to save state to sessionStorage due to size limits. User may need to re-upload after login.');
+            // Clean up potentially partial/corrupted data
+            sessionStorage.removeItem(CONTRACT_DATA_KEY);
+            sessionStorage.removeItem(IMAGES_KEY);
         }
 
         setShowLoginDialog(false);
@@ -344,78 +416,49 @@ export default function ScreenshotToContractPage() {
                     </DialogHeader>
 
                     <div className="space-y-4 py-4">
-                        {/* Privacy Policy */}
-                        <div className="flex items-start space-x-3 p-4 rounded-2xl border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm">
-                            <Checkbox
-                                id="privacy"
-                                checked={acceptPrivacy}
-                                onCheckedChange={(checked) => setAcceptPrivacy(checked === true)}
-                            />
-                            <div className="flex-1">
-                                <label htmlFor="privacy" className="font-medium text-slate-800 cursor-pointer">
-                                    นโยบายความเป็นส่วนตัว (PDPA)
-                                </label>
-                                <p className="text-sm text-slate-500 mt-1">
-                                    ข้าพเจ้ายินยอมให้เก็บรวบรวมข้อมูลส่วนบุคคล เช่น ชื่อ ที่อยู่ เลขบัตรประชาชน
-                                    และลายเซ็นอิเล็กทรอนิกส์ เพื่อจัดเก็บและดำเนินการตามสัญญา
-                                </p>
-                            </div>
+                        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 text-sm text-slate-600 space-y-3 shadow-inner">
+                            <h4 className="font-semibold text-slate-800 text-base mb-2">ข้อตกลงและเงื่อนไขแบบย่อ:</h4>
+                            <ul className="list-disc pl-5 space-y-2">
+                                <li><strong><Link href="/privacy" target="_blank" className="text-blue-600 hover:text-blue-700 hover:underline">นโยบายความเป็นส่วนตัว</Link>:</strong> ยินยอมให้ประมวลผลข้อมูลส่วนบุคคลในแชทเพื่อสร้างสัญญา</li>
+                                <li><strong><Link href="/terms" target="_blank" className="text-blue-600 hover:text-blue-700 hover:underline">ข้อกำหนดการใช้งาน</Link>:</strong> ยอมรับเงื่อนไขการใช้บริการของ Lawslane</li>
+                                <li className="text-amber-700"><strong><Link href="/ai-disclaimer" target="_blank" className="text-amber-700 hover:text-amber-800 hover:underline">ข้อจำกัด AI</Link>:</strong> สัญญาที่สร้างเป็นร่างเบื้องต้น ไม่ใช่คำแนะนำทางกฎหมาย ควรตรวจสอบก่อนใช้จริง</li>
+                            </ul>
                         </div>
 
-                        {/* Terms of Service */}
-                        <div className="flex items-start space-x-3 p-4 rounded-2xl border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm">
+                        <div className="flex items-start space-x-3 p-4 rounded-2xl border-2 border-slate-200 hover:border-blue-400 bg-white transition-all shadow-sm cursor-pointer"
+                            onClick={() => {
+                                const newValue = (!acceptPrivacy || !acceptTerms || !acceptAiDisclaimer);
+                                setAcceptPrivacy(newValue);
+                                setAcceptTerms(newValue);
+                                setAcceptAiDisclaimer(newValue);
+                            }}
+                        >
                             <Checkbox
-                                id="terms"
-                                checked={acceptTerms}
-                                onCheckedChange={(checked) => setAcceptTerms(checked === true)}
+                                id="accept-all"
+                                checked={acceptPrivacy && acceptTerms && acceptAiDisclaimer}
+                                onCheckedChange={(checked) => {
+                                    const val = checked === true;
+                                    setAcceptPrivacy(val);
+                                    setAcceptTerms(val);
+                                    setAcceptAiDisclaimer(val);
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="mt-1 h-5 w-5 data-[state=checked]:bg-blue-600"
                             />
                             <div className="flex-1">
-                                <label htmlFor="terms" className="font-medium text-slate-800 cursor-pointer">
-                                    ข้อกำหนดการใช้งาน
+                                <label htmlFor="accept-all" className="font-bold text-slate-800 cursor-pointer text-base">
+                                    ข้าพเจ้าได้อ่านและยอมรับเงื่อนไขทั้งหมด
                                 </label>
-                                <p className="text-sm text-slate-500 mt-1">
-                                    ข้าพเจ้ายอมรับเงื่อนไขการใช้บริการ รวมถึงข้อจำกัดในการใช้งาน
-                                    และความรับผิดชอบในการใช้บริการอย่างถูกต้อง
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* AI Disclaimer */}
-                        <div className="flex items-start space-x-3 p-4 rounded-2xl border border-amber-200 bg-amber-50 hover:bg-amber-100 transition-colors shadow-sm">
-                            <Checkbox
-                                id="ai-disclaimer"
-                                checked={acceptAiDisclaimer}
-                                onCheckedChange={(checked) => setAcceptAiDisclaimer(checked === true)}
-                            />
-                            <div className="flex-1">
-                                <label htmlFor="ai-disclaimer" className="font-medium text-amber-800 cursor-pointer">
-                                    ข้อจำกัดความรับผิดของ AI
-                                </label>
-                                <p className="text-sm text-amber-700 mt-1">
-                                    ข้าพเจ้าเข้าใจว่าสัญญาที่สร้างโดย AI เป็นเพียงร่างเบื้องต้น
-                                    <strong>ไม่ใช่คำแนะนำทางกฎหมาย</strong> ควรตรวจสอบกับทนายความก่อนใช้จริง
+                                <p className="text-sm text-slate-500 mt-0.5">
+                                    ครอบคลุมนโยบายความเป็นส่วนตัว, ข้อกำหนดการใช้งาน และข้อจำกัดความรับผิดของ AI
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Turnstile CAPTCHA - shows after all checkboxes are checked */}
-                    {acceptPrivacy && acceptTerms && acceptAiDisclaimer && !turnstileToken && (
-                        <div className="py-4 border-t">
-                            <p className="text-sm text-slate-600 mb-3 text-center">ยืนยันว่าคุณไม่ใช่ Robot</p>
-                            <TurnstileWidget onVerify={(token) => setTurnstileToken(token)} />
-                        </div>
-                    )}
+                    {/* Removed Turnstile CAPTCHA from here since frontend backend doesn't check it for draft */}
 
-                    {/* Turnstile verified badge */}
-                    {turnstileToken && (
-                        <div className="py-3 flex items-center justify-center gap-2 text-green-600 border-t">
-                            <CheckCircle className="w-4 h-4" />
-                            <span className="text-sm font-medium">ยืนยันตัวตนสำเร็จ</span>
-                        </div>
-                    )}
-
-                    <DialogFooter className="gap-2 sm:gap-0">
+                    <DialogFooter className="gap-2 sm:gap-0 mt-4 border-t pt-4">
                         <Button
                             variant="outline"
                             className="rounded-full px-6"
@@ -424,12 +467,12 @@ export default function ScreenshotToContractPage() {
                             ยกเลิก
                         </Button>
                         <Button
-                            onClick={handleAcceptPdpa}
-                            disabled={!acceptPrivacy || !acceptTerms || !acceptAiDisclaimer || !turnstileToken}
+                            onClick={() => setShowPdpaDialog(false)}
+                            disabled={!acceptPrivacy || !acceptTerms || !acceptAiDisclaimer}
                             className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-full px-6"
                         >
                             <ShieldCheck className="w-4 h-4 mr-2" />
-                            ยินยอมและดำเนินการต่อ
+                            ยอมรับข้อตกลงและปิดหน้าต่าง
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -476,80 +519,20 @@ export default function ScreenshotToContractPage() {
                 </DialogContent>
             </Dialog>
 
-            <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
-                {/* Hero Section */}
-                <div className="relative bg-[#0B2555] pt-28 pb-48 overflow-hidden">
-                    {/* Modern Glow Effects */}
-                    <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-blue-400/50 to-transparent" />
-                    <div className="absolute -top-48 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-blue-500/30 blur-[120px] rounded-[100%]" />
-                    <div className="absolute top-20 -right-32 w-[500px] h-[500px] bg-blue-400/20 rounded-full mix-blend-screen filter blur-[100px] animate-blob" />
-                    <div className="absolute -bottom-20 -left-32 w-[400px] h-[400px] bg-cyan-400/20 rounded-full mix-blend-screen filter blur-[100px] animate-blob animation-delay-4000" />
-
-                    {/* Decorative Grid */}
-                    <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
-
-                    <div className="container mx-auto max-w-5xl px-4 relative z-10">
-                        <FadeIn direction="up">
-                            <div className="text-center space-y-6">
-                                {/* Badge */}
-                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-blue-200 text-sm font-medium mb-4 backdrop-blur-md">
-                                    <Sparkles className="w-4 h-4 text-yellow-400" />
-                                    <span>AI-Powered Legal Assistant</span>
-                                </div>
-
-                                <h1
-                                    className="font-bold text-white font-headline tracking-tighter leading-[1.1]"
-                                    style={{ fontSize: 'clamp(4rem, 10vw, 7.5rem)' }}
-                                >
-                                    แคปแล้ว<span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-500 drop-shadow-lg">ดีล!</span>
-                                </h1>
-
-                                <p className="text-blue-100/90 text-lg md:text-2xl max-w-2xl mx-auto leading-relaxed font-light">
-                                    เปลี่ยนแชทที่คุยงานให้เป็นสัญญาที่ถูกต้องตามกฎหมาย<br className="hidden md:block" />
-                                    ปกป้องสิทธิ์ของคุณง่ายๆ <span className="text-yellow-400 font-medium">ใน 3 วินาที</span>
-                                </p>
-
-                                <div className="pt-4">
-                                    <Link
-                                        href={`/help`}
-                                        className="inline-flex items-center gap-2 text-blue-200 hover:text-white transition-colors text-sm"
-                                    >
-                                        <HelpCircle className="w-4 h-4" />
-                                        <span>คู่มือการใช้งานและคำถามที่พบบ่อย (FAQ)</span>
-                                    </Link>
-                                </div>
-
-                                {/* Feature pills */}
-                                <div className="flex flex-wrap justify-center gap-3 pt-8">
-                                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 backdrop-blur-md rounded-2xl px-5 py-2.5 text-sm text-white shadow-xl shadow-black/10">
-                                        <CheckCircle className="w-5 h-5 text-emerald-400" />
-                                        <span className="font-medium">ฟรี ไม่มีค่าใช้จ่าย</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 backdrop-blur-md rounded-2xl px-5 py-2.5 text-sm text-white shadow-xl shadow-black/10">
-                                        <Shield className="w-5 h-5 text-blue-400" />
-                                        <span className="font-medium">ปลอดภัย เข้ารหัส</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 backdrop-blur-md rounded-2xl px-5 py-2.5 text-sm text-white shadow-xl shadow-black/10">
-                                        <FileSignature className="w-5 h-5 text-yellow-400" />
-                                        <span className="font-medium">PDF พร้อมใช้งาน</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </FadeIn>
-                    </div>
-                </div>
-
+            <div className="min-h-[calc(100vh-4rem)] flex flex-col bg-slate-50">
                 {/* Main Content Overlap - Single Column */}
-                <div className="container mx-auto max-w-2xl px-4 md:px-6 -mt-20 relative z-20 pb-20">
+                <div className="flex-1 w-full max-w-4xl mx-auto px-4 md:px-6 py-8 md:py-12 flex flex-col justify-center">
                     {/* Show Upload Section when no contract */}
                     {!contractData ? (
-                        <FadeIn direction="up" delay={200}>
-                            <Card className="border border-white/40 shadow-2xl shadow-blue-900/10 rounded-[2.5rem] overflow-hidden bg-white/80 backdrop-blur-2xl ring-1 ring-black/5">
-                                <CardHeader className="bg-white/50 border-b border-slate-100/50 p-8 pb-6">
-                                    <CardTitle className="text-2xl font-bold text-slate-800 flex items-center justify-center gap-3">
-                                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center text-blue-700 shadow-sm border border-blue-100">
-                                            <FileSignature className="w-6 h-6" />
+                        <FadeIn direction="up">
+                            <Card className="border-none shadow-none md:border-solid md:border-white/40 md:shadow-2xl md:shadow-blue-900/10 rounded-[2.5rem] bg-transparent md:bg-white/80 md:backdrop-blur-2xl md:ring-1 md:ring-black/5">
+                                <CardHeader className="md:bg-white/50 border-b border-transparent md:border-slate-100/50 p-6 md:p-8 pb-4">
+                                    <div className="flex justify-center mb-4">
+                                        <div className="w-16 h-16 rounded-2xl bg-blue-100/50 flex items-center justify-center text-blue-600 shadow-sm border border-blue-100/50">
+                                            <FileSignature className="w-8 h-8" />
                                         </div>
+                                    </div>
+                                    <CardTitle className="text-xl md:text-2xl font-bold text-slate-800 text-center">
                                         อัปโหลดรูปแชทเพื่อเริ่มร่างสัญญา
                                     </CardTitle>
                                 </CardHeader>
@@ -598,9 +581,39 @@ export default function ScreenshotToContractPage() {
                                         onChange={handleImageUpload}
                                     />
 
+                                    {/* Inline Consent */}
+                                    {images.length > 0 && (
+                                        <div className="flex items-start space-x-3 p-4 rounded-xl border border-slate-200 bg-white/50 transition-all cursor-pointer hover:border-blue-400"
+                                            onClick={() => {
+                                                const val = (!acceptPrivacy || !acceptTerms || !acceptAiDisclaimer);
+                                                setAcceptPrivacy(val);
+                                                setAcceptTerms(val);
+                                                setAcceptAiDisclaimer(val);
+                                            }}
+                                        >
+                                            <Checkbox
+                                                id="inline-consent"
+                                                checked={acceptPrivacy && acceptTerms && acceptAiDisclaimer}
+                                                onCheckedChange={(checked) => {
+                                                    const val = checked === true;
+                                                    setAcceptPrivacy(val);
+                                                    setAcceptTerms(val);
+                                                    setAcceptAiDisclaimer(val);
+                                                }}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="mt-0.5 h-5 w-5 data-[state=checked]:bg-blue-600"
+                                            />
+                                            <div className="flex-1">
+                                                <label htmlFor="inline-consent" className="font-semibold text-slate-700 cursor-pointer text-sm">
+                                                    ข้าพเจ้ายอมรับ <button onClick={(e) => { e.stopPropagation(); setShowPdpaDialog(true); }} className="text-blue-600 hover:text-blue-700 hover:underline inline-block">เงื่อนไขและข้อตกลง</button> สำหรับการสร้างสัญญาด้วย AI
+                                                </label>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <Button
                                         onClick={processImage}
-                                        disabled={images.length === 0 || isProcessing}
+                                        disabled={images.length === 0 || isProcessing || !acceptPrivacy || !acceptTerms || !acceptAiDisclaimer}
                                         className="w-full bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-800 hover:to-blue-700 text-white shadow-xl shadow-blue-900/20 rounded-2xl py-7 text-lg font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] border border-blue-600/50 disabled:opacity-50 disabled:pointer-events-none"
                                     >
                                         {isProcessing ? (
@@ -648,55 +661,6 @@ export default function ScreenshotToContractPage() {
                                     </div>
                                 </CardHeader>
                                 <CardContent className="space-y-6 p-6 md:p-8">
-                                    {/* Alerts */}
-                                    {contractData.missingInfo.length > 0 && (
-                                        <div className="bg-orange-50 border border-orange-100 rounded-2xl p-4 animate-in slide-in-from-bottom-2">
-                                            <div className="flex items-start gap-3">
-                                                <div className="p-2 bg-orange-100 rounded-full text-orange-600 mt-0.5">
-                                                    <AlertTriangle className="h-4 w-4" />
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-semibold text-orange-800 text-sm">⚠️ ข้อมูลที่ไม่พบในแชท</h4>
-                                                    <ul className="mt-2 space-y-1">
-                                                        {contractData.missingInfo.map((info, i) => (
-                                                            <li key={i} className="text-sm text-orange-700 flex items-center gap-2">
-                                                                <span className="w-1.5 h-1.5 rounded-full bg-orange-400" />
-                                                                {info}
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {contractData.riskyTerms.length > 0 && (
-                                        <div className="bg-red-50 border border-red-100 rounded-2xl p-4 animate-in slide-in-from-bottom-2">
-                                            <div className="flex items-start gap-3">
-                                                <div className="p-2 bg-red-100 rounded-full text-red-600 mt-0.5">
-                                                    <Shield className="h-4 w-4" />
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-semibold text-red-800 text-sm">⛔️ ข้อความที่มีความเสี่ยง!</h4>
-                                                    <ul className="mt-2 space-y-1">
-                                                        {contractData.riskyTerms.map((term, i) => (
-                                                            <li key={i} className="text-sm text-red-700 flex items-center gap-2">
-                                                                <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                                                                {term}
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                    <Button
-                                                        variant="link"
-                                                        className="text-red-600 p-0 h-auto font-semibold mt-3 text-sm hover:text-red-700 group"
-                                                        onClick={handleUpsell}
-                                                    >
-                                                        ให้ทนายช่วยตรวจแก้ (เริ่มต้น 500฿) <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
 
                                     {/* Warning to use real legal names */}
                                     <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
@@ -833,6 +797,58 @@ export default function ScreenshotToContractPage() {
                                             placeholder="เช่น ชำระส่วนที่เหลือเมื่องานเสร็จ"
                                             className={`bg-white rounded-xl ${!contractData.paymentTerms ? 'border-amber-400 bg-amber-50' : ''}`}
                                         />
+                                    </div>
+
+                                    <div className="space-y-4 pt-4 mt-2">
+                                        {/* Alerts */}
+                                        {contractData.missingInfo.length > 0 && (
+                                            <div className="bg-orange-50 border border-orange-100 rounded-2xl p-4 animate-in slide-in-from-bottom-2">
+                                                <div className="flex items-start gap-3">
+                                                    <div className="p-2 bg-orange-100 rounded-full text-orange-600 mt-0.5">
+                                                        <AlertTriangle className="h-4 w-4" />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-semibold text-orange-800 text-sm">⚠️ ข้อมูลที่ไม่พบในแชท</h4>
+                                                        <ul className="mt-2 space-y-1">
+                                                            {contractData.missingInfo.map((info, i) => (
+                                                                <li key={i} className="text-sm text-orange-700 flex items-center gap-2">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-orange-400" />
+                                                                    {info}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {contractData.riskyTerms.length > 0 && (
+                                            <div className="bg-red-50 border border-red-100 rounded-2xl p-4 animate-in slide-in-from-bottom-2">
+                                                <div className="flex items-start gap-3">
+                                                    <div className="p-2 bg-red-100 rounded-full text-red-600 mt-0.5">
+                                                        <Shield className="h-4 w-4" />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="font-semibold text-red-800 text-sm">⛔️ ข้อความที่มีความเสี่ยง!</h4>
+                                                        <ul className="mt-2 space-y-1">
+                                                            {contractData.riskyTerms.map((term, i) => (
+                                                                <li key={i} className="text-sm text-red-700 flex items-center gap-2">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                                                                    {term}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                        <Button
+                                                            variant="link"
+                                                            className="text-red-600 p-0 h-auto font-semibold mt-3 text-sm hover:text-red-700 group"
+                                                            onClick={handleUpsell}
+                                                        >
+                                                            ให้ทนายช่วยตรวจแก้ (เริ่มต้น 500฿) <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                                         <Button

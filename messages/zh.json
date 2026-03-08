@@ -1,140 +1,194 @@
 {
     "HomePage": {
         "hero": {
-            "title": "咨询法律问题\n与专业律师",
-            "subtitle": "连接您与专家律师的平台。寻找合适的律师，或立即咨询我们的AI智能律师。",
-            "searchPlaceholder": "搜索律师、专家或问题..."
-        },
-        "legalForms": {
-            "title": "免费下载法律表格！！",
-            "description": "我们致力于收集最准确和最新的法律表格，以确保您在每笔交易中的信心。使用由专业律师起草的文件，最大限度地降低法律风险。",
-            "features": {
-                "professional": "由专业律师起草，符合法律规定",
-                "update": "最新更新，涵盖所有合同类型",
-                "free": "免费下载，即刻使用，易于编辑"
-            },
-            "cta": "下载所有表格"
-        },
-        "lawyerSearch": {
-            "title": "为您找到合适的律师",
-            "description": "咨询专业律师。易于查找，可靠，并可通过视频通话或聊天立即咨询。",
-            "features": {
-                "verified": "经过验证的执业律师",
-                "expert": "各领域的专业知识",
-                "review": "透明的评论和费用"
-            },
-            "cta": "查找律师"
-        },
-        "aiAnalysis": {
-            "title": "不确定需要哪位律师？",
-            "description": "让AI分析您的问题并推荐合适的律师。",
-            "placeholder": "在此描述您的问题，例如“欺诈案”、“公司注册”、“土地纠纷”",
-            "button": "分析并推荐",
-            "analyzing": "正在分析...",
-            "consultButton": "咨询AI律师"
+            "badge": "AI 创新，打造安全快捷的合同体验",
+            "brandPart1": "截屏",
+            "brandPart2": "即得!",
+            "title": "3秒钟，从聊天截屏到法律合同",
+            "subtitle": "利用智能 AI 从聊天截屏中起草合同，保护您的业务，并即时访问专业法律网络。",
+            "viewPricing": "查看价格方案",
+            "trustStripe": "Stripe 安全支付",
+            "trustAI": "AI 驱动安全",
+            "trustLegal": "专业法律网络"
         },
         "mainFeatures": {
             "anywhere": {
-                "title": "随时随地咨询",
-                "description": "无论身在何处，即刻与律师聊天。"
+                "title": "实时分析",
+                "description": "AI 立即从聊天截图中提取关键信息"
             },
             "quality": {
-                "title": "优质律师",
-                "description": "所有律师均通过历史和执照验证。"
+                "title": "律师审核",
+                "description": "连接经过验证的律师以审核 AI 生成的合同"
             },
             "privacy": {
                 "title": "安全私密",
-                "description": "您的案件数据将以最高保密和安全标准保存。"
+                "description": "您的数据经过加密并以最高安全标准处理"
             }
         },
-        "usageSteps": {
-            "label": "使用步骤",
-            "title": "简单、方便、快捷"
-        },
-        "verifyStatus": {
-            "title": "验证律师身份",
-            "description": "为了最大程度的信心，您可以立即通过律师委员会数据库验证系统中每位律师的执照。",
-            "button": "验证律师身份"
-        },
-        "smeSolution": {
-            "label": "中小企业服务",
-            "title": "中小企业法律解决方案",
-            "description": "通过专业的法律咨询服务，降低法律风险，帮助您的业务稳步增长。",
-            "contract": "起草和审查合同",
-            "consultant": "企业法律顾问",
-            "button": "查看中小企业服务"
-        },
-        "recommendedLawyers": {
-            "title": "推荐律师",
-            "subtitle": "经验丰富且专业的律师，随时为您提供咨询并密切关注您的案件。",
-            "loading": "正在加载律师...",
-            "emptyTitle": "未找到推荐律师",
-            "emptyDescription": "系统中目前没有推荐律师。请稍后再试。",
-            "viewAll": "查看所有律师"
-        },
-        "services": {
-            "title": "我们的服务",
-            "subtitle": "Lawlane 提供多样化、快速且透明的法律服务。",
-            "contracts": {
-                "title": "起草和审查合同",
-                "description": "起草、审查和修改各类商业合同，以堵塞漏洞并保护贵公司的最大利益。"
+        "featuresShowcase": {
+            "title": "为简单而设计的系统",
+            "subtitle": "无需学习新方法，立即使用您熟悉的应用程序",
+            "card1": {
+                "title": "易于使用，只需通过 LINE 发送聊天截图",
+                "description": "截取约定的对话屏幕，立即发送给 AI 进行分析"
             },
-            "consultant": {
-                "title": "企业法律顾问",
-                "description": "随时有私人律师提供咨询，帮助基于法律正确性做出商业决策。"
-            },
-            "registration": {
-                "title": "注册和许可",
-                "description": "处理公司注册、章程修改和申请各种营业执照。"
-            },
-            "dispute": {
-                "title": "商业纠纷解决",
-                "description": "民商事案件的调解和诉讼，以保护您的商业权利和声誉。"
+            "card2": {
+                "title": "通过 AI 自动创建合同",
+                "description": "AI 将根据您的对话准确总结并起草合同条款"
             }
         },
-        "articles": {
-            "title": "法律文章",
-            "loading": "正在加载文章...",
-            "viewAll": "查看全部",
-            "readMore": "阅读更多",
-            "publishedAt": "发布于",
-            "emptyTitle": "未找到文章",
-            "emptyDescription": "系统中目前没有法律文章。请稍后再试。"
+        "howItWorks": {
+            "title": "创建合同的 3 个简单步骤",
+            "subtitle": "通过 AI 技术将复杂的法律事务变得简单",
+            "steps": {
+                "1": {
+                    "title": "1. 截取聊天记录",
+                    "description": "只需截取谈话屏幕即可，无论是 Line、Messenger 还是 WhatsApp"
+                },
+                "2": {
+                    "title": "2. AI 分析协议",
+                    "description": "智能 AI 系统将自动提取关键信息，如当事人、价格、交付日期和各种条件"
+                },
+                "3": {
+                    "title": "3. 获取可用合同",
+                    "description": "您将获得符合法律原则的合同草案，可以立即下载为 PDF 或转发给交易对手"
+                }
+            },
+            "freeTier": "每月免费开始 8 份合同"
         },
-        "forLawyersFooter": {
-            "title": "律师专用",
-            "description": "加入我们，扩大您的客户群并建立在线信誉。",
-            "button": "申请成为律师"
+        "features": {
+            "title": "为什么选择 Lawslane CapDeal?",
+            "subtitle": "将非正式协议转变为具有法律效力的文件的最智能方式。",
+            "items": {
+                "pdf": {
+                    "title": "一键生成 PDF",
+                    "description": "立即生成并下载您的合同为专业的 PDF 文件。"
+                },
+                "chat": {
+                    "title": "从聊天到合同",
+                    "description": "顺畅支持 Line、Messenger 和其他聊天平台。"
+                }
+            }
         },
-        "stats": {
-            "faster": "更快",
-            "experts": "专家律师",
-            "247": "24/7 服务",
-            "satisfaction": "满意度"
+        "pricing": {
+            "title": "简单、透明的价格方案",
+            "subtitle": "选择适合您需求的方案。无隐藏内容。"
+        },
+        "capAndDeal": {
+            "title": "截屏即得：从聊天记录创建合同",
+            "description": "只需截取您的聊天协议，我们的 AI 就会自动生成具有法律约束力的合同。无需起草，无需律师。",
+            "features": {
+                "ai": "AI 自动分析聊天并生成合同",
+                "fast": "不到 1 分钟即可完成，随时可用",
+                "legal": "具有法律效力且可执行的合同"
+            },
+            "cta": "立即开始截屏即得"
+        },
+        "pricing_tiers": {
+            "free": {
+                "name": "免费",
+                "popular_tag": "FREE",
+                "description": "适合个别初学者。",
+                "unit": "份合同/月",
+                "features": [
+                    "每月分析并创建 8 份合同",
+                    "支持 Line、Messenger 等应用",
+                    "起草基础法律协议",
+                    "下载即用 PDF 文件"
+                ],
+                "cta": "免费开始"
+            },
+            "lite": {
+                "name": "标准版 (Lite)",
+                "description": "适合个人或早期初创公司。",
+                "unit": "份合同/月",
+                "features": [
+                    "每月分析并创建 30 份合同",
+                    "文档无 Lawslane 水印",
+                    "高速 AI 处理",
+                    "无限合同历史存储",
+                    "支持长聊天截图"
+                ],
+                "cta": "立即开始"
+            },
+            "pro": {
+                "name": "专业版 (Pro)",
+                "popular_tag": "最受欢迎",
+                "description": "非常适合中小企业和小型团队。",
+                "unit": "份合同/月",
+                "features": [
+                    "每月分析并创建 100 份合同",
+                    "包含 Lite 计划的所有功能",
+                    "每月 1 次基础律师咨询",
+                    "专家进行法律准确性验证",
+                    "支持多方协议"
+                ],
+                "cta": "立即开始"
+            },
+            "scale": {
+                "name": "扩展版 (Scale)",
+                "description": "适合需要全面管理的成长型企业。",
+                "unit": "份合同/月",
+                "features": [
+                    "每月分析并创建 1,000 份合同",
+                    "包含 Pro 计划的所有功能",
+                    "无限律师合同验证",
+                    "按需定制合同起草",
+                    "面向团队的合同管理系统"
+                ],
+                "cta": "联系销售"
+            }
+        },
+        "pricing_common": {
+            "monthly": "按月",
+            "yearly": "按年",
+            "save_percent": "省 20%",
+            "currency": "฿",
+            "period": "/月"
         }
+    },
+    "contactSection": {
+        "title": "联系我们",
+        "subtitle": "如果您有任何疑问或需要更多信息，我们的团队随时为您提供帮助。",
+        "name": "姓名",
+        "email": "电子邮件",
+        "phone": "电话号码",
+        "phoneValue": "097-227-5494",
+        "officeValue": "泰国，孔敬",
+        "message": "内容",
+        "placeholder": {
+            "name": "输入您的姓名",
+            "email": "example@email.com",
+            "phone": "08x-xxx-xxxx",
+            "message": "在此输入您的信息..."
+        },
+        "submit": "发送信息",
+        "submitting": "正在发送...",
+        "successTitle": "信息已发送",
+        "successDesc": "我们已收到您的信息，并将尽快与您联系。"
+    },
+    "NotFound": {
+        "title": "找不到页面",
+        "description": "抱歉，您查找的页面可能已被移除、更名或暂时不可用。",
+        "backHome": "返回首页",
+        "contactSupport": "联系支持"
     },
     "Navigation": {
         "forSME": "中小企业",
-        "findLawyer": "查找律师",
-        "verifyLawyer": "验证律师",
         "articles": "文章",
         "forms": "表格",
-        "forLawyers": "律师专用",
         "home": "首页",
         "login": "登录",
         "logout": "退出",
         "myAccount": "我的账户",
         "dashboard": "仪表板",
-        "adminDashboard": "管理员控制台",
-        "adminView": "律师仪表板 (管理员视图)",
+        "adminDashboard": "管理员后台 (Admin)",
         "manageAccount": "管理账户",
-        "searchPlaceholder": "搜索律师、专业知识或问题...",
-        "smeMenu": {
-            "contracts": "起草和审查合同",
-            "consultant": "企业法律顾问",
-            "registration": "注册和许可",
-            "dispute": "商业纠纷解决"
-        },
+        "searchPlaceholder": "搜索合同、专业知识或问题...",
+        "backToMain": "返回主页",
+        "pricing": "价格",
+        "services": "服务",
+        "capAndDeal": "卡普和交易",
         "scrollToTop": "回到顶部"
     },
     "ComingSoon": {
@@ -143,36 +197,6 @@
         "description": "我们正在为企业构建最全面的平台，以简化并增强每项业务的合同管理和法律咨询。",
         "backHome": "回到首页",
         "contactSales": "联系销售人员"
-    },
-    "VerifyLawyer": {
-        "backToHome": "返回首页",
-        "title": "验证",
-        "titleLine2": "律师状态",
-        "description": "通过验证律师执照信息来建立信心，确保服务的准确性和安全性。",
-        "dataSource": "此数据仅来自 Lawslane 数据库",
-        "lastUpdated": "最后更新于",
-        "lastUpdatedToday": "最后更新：今天",
-        "loading": "加载中...",
-        "formTitle": "输入信息进行验证",
-        "formDescription": "输入执照号码或律师姓名",
-        "licenseNumberLabel": "律师执照号码",
-        "licenseNumberPlaceholder": "例如 12345/2550",
-        "or": "或",
-        "lawyerNameLabel": "律师姓名",
-        "lawyerNamePlaceholder": "请输入姓名",
-        "verifyButton": "验证",
-        "verifying": "正在从律师协会验证信息（模拟）...",
-        "resultFound": {
-            "title": "找到信息",
-            "description": "该律师已在 Lawslane 系统中验证",
-            "licenseNumber": "执照号码：",
-            "viewProfile": "查看资料"
-        },
-        "resultNotFound": {
-            "title": "未找到",
-            "description": "未找到符合所提供信息的律师。请检查详细信息或联系支持。",
-            "closeButton": "关闭"
-        }
     },
     "LegalForms": {
         "heroTitle": "法律表格中心",
@@ -206,58 +230,6 @@
             "cancel": "取消",
             "loginSignup": "登录 / 注册"
         }
-    },
-    "Lawyers": {
-        "recommendedTitle": "为您推荐的律师",
-        "recommendedDescription": "这是AI根据您的问题推荐的律师名单，以及所有其他律师",
-        "analyzing": "正在分析和排序推荐律师...",
-        "foundLawyers": "找到 {count} 位符合条件的律师",
-        "filter": {
-            "title": "搜索筛选",
-            "expertise": "专业领域",
-            "all": "全部",
-            "minRating": "最低评分",
-            "andUp": "以上",
-            "province": "省份/地区",
-            "allProvinces": "所有省份",
-            "searchButton": "筛选搜索"
-        },
-        "card": {
-            "verified": "已认证",
-            "reviews": "条评价",
-            "newLawyer": "新律师",
-            "viewProfile": "查看资料",
-            "sendMessage": "发送消息"
-        },
-        "specialties": {
-            "smeFraud": "中小企业欺诈案",
-            "civilCommercial": "民商事案件",
-            "contractBreach": "违约案件",
-            "realEstate": "房地产",
-            "familyInheritance": "家庭与继承",
-            "criminal": "刑事案件",
-            "labor": "劳动法",
-            "intellectualProperty": "知识产权",
-            "business": "商业法"
-        }
-    },
-    "LawyerProfile": {
-        "backToList": "返回律师列表",
-        "about": "关于",
-        "educationLicense": "学历与执照",
-        "noEducation": "学历未指定",
-        "licenseNumber": "执照编号",
-        "experience": "经验",
-        "noExperience": "经验未指定",
-        "workStats": "工作统计",
-        "responseRate": "回复率",
-        "completedCases": "已完成案件",
-        "userReviews": "用户评价",
-        "noReviews": "暂无评价",
-        "reviews": "条评价",
-        "bookConsultation": "预约咨询",
-        "sendMessage": "发送消息",
-        "lawyerCannotBook": "律师账户无法预约"
     },
     "Dashboard": {
         "upcomingAppointments": "即将到来的预约",
@@ -490,258 +462,28 @@
         "notFound": "未找到工单。"
     },
     "Footer": {
-        "description": "在线律师市场，连接您与法律专家",
-        "quickLinks": {
-            "title": "快速链接",
+        "description": "利用专为中小企业和现代企业定制的 AI 驱动法律技术，为您的业务赋能。",
+        "services": {
+            "title": "我们的服务",
+            "capAndDeal": "卡普和交易 (AI 分析)",
+            "legalForms": "法律表格中心",
+            "aiAdvisor": "法律顾问",
+            "business": "Lawslane for Business"
+        },
+        "about": {
+            "title": "公司信息",
             "home": "首页",
-            "articles": "文章",
-            "findLawyer": "查找律师",
-            "verifyLawyer": "验证律师状态",
-            "customerDashboard": "客户仪表板"
-        },
-        "forLawyers": {
-            "title": "律师专用",
-            "join": "加入 Lawslane",
-            "login": "律师登录",
-            "dashboard": "律师仪表板",
-            "adminDashboard": "管理员仪表板",
-            "adminView": "律师仪表板 (管理员视图)"
-        },
-        "legal": {
-            "title": "法律",
-            "privacy": "隐私政策",
-            "terms": "服务条款",
-            "aiDisclaimer": "AI 免责声明",
+            "about": "我们的故事",
+            "pricing": "价格与计划",
             "help": "帮助中心"
         },
+        "legal": {
+            "title": "法律合规",
+            "privacy": "隐私政策",
+            "terms": "服务条款",
+            "aiDisclaimer": "AI 免责声明"
+        },
         "copyright": "© {year} Lawslane. 版权所有。"
-    },
-    "ContractsService": {
-        "title": "文件起草与审查服务",
-        "subtitle": "签字前请放心... 让专业律师处理您的重要文件。",
-        "stepsTitle": "服务流程（简单3步）",
-        "steps": {
-            "1": {
-                "title": "上传文件",
-                "description": "发送您需要审查的文件（如 .pdf, .docx）或说明您起草新文件的需求。"
-            },
-            "2": {
-                "title": "律师评估",
-                "description": "律师将评估工作范围，并在开始工作前告知您明确的服务费用。"
-            },
-            "3": {
-                "title": "接收文件与咨询",
-                "description": "接收完成审查/起草的文件以及律师的法律注意事项说明。"
-            }
-        },
-        "docTypesTitle": "我们擅长的文件类型",
-        "docTypes": {
-            "business": "商业合同（MOU, NDA, 买卖合同）",
-            "employment": "雇佣合同 / 服务协议",
-            "lease": "租赁协议 / 房地产买卖合同",
-            "wills": "遗嘱 / 遗产文件",
-            "litigation": "诉讼 / 证词 / 法律文件",
-            "other": "其他应要求的文件"
-        },
-        "pricing": {
-            "title": "服务费 1,500 泰铢起",
-            "subtitle": "（取决于文件复杂程度）",
-            "cta": "开始评估（上传文件）"
-        }
-    },
-    "ContractsRequest": {
-        "title": "发送文件以进行价格评估",
-        "subtitle": "填写信息并上传文件，以便律师评估工作范围和价格。",
-        "formTitle": "服务申请表",
-        "labels": {
-            "name": "姓名 / 公司名称",
-            "namePlaceholder": "输入您的姓名",
-            "phone": "电话号码",
-            "phonePlaceholder": "08x-xxx-xxxx",
-            "email": "电子邮件（用于接收报价）",
-            "emailPlaceholder": "name@example.com",
-            "serviceType": "服务类型",
-            "serviceTypePlaceholder": "选择服务类型",
-            "upload": "上传文件（如有）",
-            "details": "其他详细信息 / 关注点",
-            "detailsPlaceholder": "例如：重点关注保密性，或检查终止条件"
-        },
-        "serviceTypes": {
-            "draft": "起草新合同",
-            "review": "审查和修改现有合同",
-            "consult": "合同法律咨询",
-            "other": "其他"
-        },
-        "upload": {
-            "dragDrop": "点击上传或将文件拖放到此处",
-            "support": "支持 PDF, Word, JPG (最大 5MB)"
-        },
-        "submit": "提交评估",
-        "submitting": "正在发送...",
-        "privacy": "根据我们的隐私政策，您的信息将被严格保密。",
-        "toast": {
-            "successTitle": "请求已发送",
-            "successDesc": "工作人员将在 24 小时内联系您并提供价格评估。",
-            "errorTitle": "发生错误",
-            "fileTooLarge": "文件过大。最大限制为 5MB。"
-        }
-    },
-    "SMEPage": {
-        "title": "商业法律服务",
-        "subtitle": "Lawslane 为中小企业提供全面的法律服务。",
-        "services": {
-            "contracts": {
-                "title": "商业合同起草与审查",
-                "description": "起草、审查和修改各类商业合同，以堵塞漏洞并最大限度地维护贵公司的利益。"
-            },
-            "advisor": {
-                "title": "企业法律顾问",
-                "description": "拥有私人律师随时提供咨询，帮助在法律正确性的基础上做出商业决策。"
-            },
-            "registration": {
-                "title": "注册与许可",
-                "description": "处理公司注册、章程修改和各种营业执照申请。"
-            },
-            "dispute": {
-                "title": "商业纠纷解决",
-                "description": "在民商事案件中进行谈判、调解和诉讼，以保护您的商业权利和声誉。"
-            }
-        },
-        "benefits": {
-            "title": "为什么选择 Lawslane 商业服务？",
-            "list": {
-                "risk": "降低经商法律风险",
-                "cost": "与聘请内部法律团队相比，节省成本",
-                "expert": "获得 Lawslane 专业律师团队的支持",
-                "docs": "专业地管理文件和合同",
-                "privacy": "商业机密最高级别安全保障"
-            }
-        },
-        "contact": {
-            "title": "联系 Lawslane 商业服务",
-            "subtitle": "对企业法律服务感兴趣？填写表格以便工作人员回电，或通过以下渠道联系我们。",
-            "phone": "电话号码",
-            "email": "电子邮件",
-            "line": "LINE 官方账号"
-        }
-    },
-    "SMEContactForm": {
-        "title": "服务申请表",
-        "labels": {
-            "name": "姓名 / 公司名称",
-            "namePlaceholder": "输入您的姓名",
-            "phone": "电话号码",
-            "phonePlaceholder": "08x-xxx-xxxx",
-            "email": "电子邮件（用于接收报价）",
-            "emailPlaceholder": "name@example.com",
-            "serviceType": "服务类型",
-            "serviceTypePlaceholder": "选择服务类型",
-            "upload": "上传文件（如有）"
-        },
-        "serviceTypes": {
-            "contract": "商业合同起草与审查",
-            "advisor": "企业法律顾问",
-            "registration": "注册与许可",
-            "dispute": "商业纠纷解决",
-            "other": "其他"
-        },
-        "upload": {
-            "click": "点击上传文件",
-            "support": "支持 PDF, Word, JPG, PNG (最大 10MB)"
-        },
-        "submit": "提交",
-        "submitting": "正在发送...",
-        "success": {
-            "title": "发送成功！",
-            "description": "感谢您的关注。Lawslane 团队将尽快联系您，{name}。",
-            "button": "发送另一条消息"
-        },
-        "toast": {
-            "successTitle": "信息发送成功",
-            "successDesc": "我们的工作人员将尽快回复您。",
-            "errorTitle": "发生错误",
-            "errorDesc": "无法发送信息。请重试。"
-        }
-    },
-    "RegistrationService": {
-        "title": "商业注册服务",
-        "subtitle": "与我们一起正确快速地开展您的业务。",
-        "servicesTitle": "我们的服务涵盖",
-        "services": {
-            "company": {
-                "title": "有限公司注册",
-                "description": "适合需要信誉的一般企业。"
-            },
-            "partnership": {
-                "title": "合伙企业注册",
-                "description": "适合拥有 2 名或以上联合创始人的小型企业。"
-            },
-            "trademark": {
-                "title": "商标注册",
-                "description": "保护您的品牌和徽标。"
-            }
-        },
-        "stepsTitle": "服务流程",
-        "steps": {
-            "1": {
-                "title": "填写信息",
-                "description": "填写初步业务信息表。"
-            },
-            "2": {
-                "title": "律师联系",
-                "description": "律师核实信息并回电确认。"
-            },
-            "3": {
-                "title": "支付费用",
-                "description": "支付规费和服务费。"
-            },
-            "4": {
-                "title": "接收文件",
-                "description": "律师办理注册并交付文件。"
-            }
-        },
-        "pricing": {
-            "title": "服务费 3,500 泰铢起",
-            "remark": "（不含商业发展厅规费）"
-        },
-        "cta": "开始注册",
-        "back": "返回所有服务"
-    },
-    "RegistrationRequest": {
-        "title": "开始商业注册",
-        "subtitle": "填写初步信息，以便律师准备文件并与您联系。",
-        "formTitle": "商业信息表",
-        "labels": {
-            "registrationType": "注册类型",
-            "companyName": "企业名称 (泰文/英文)",
-            "companyNamePlaceholder": "例如：Lawslane Co., Ltd.",
-            "companyNameHint": "如果您还没有确定的名称，可以填写暂定名称。",
-            "contactName": "联系人姓名",
-            "contactNamePlaceholder": "填写您的姓名",
-            "phone": "电话号码",
-            "phonePlaceholder": "08x-xxx-xxxx",
-            "email": "电子邮件",
-            "emailPlaceholder": "name@example.com",
-            "details": "其他详情 (选填)",
-            "detailsPlaceholder": "例如：股东人数、注册资本或其他疑问"
-        },
-        "registrationTypes": {
-            "placeholder": "选择注册类型",
-            "company": "有限公司注册",
-            "partnership": "合伙企业注册",
-            "trademark": "商标注册",
-            "other": "其他"
-        },
-        "submit": "提交注册申请",
-        "submitting": "正在发送...",
-        "privacy": "您的信息将被严格保密，仅用于注册目的。",
-        "toast": {
-            "selectType": "请选择注册类型",
-            "successTitle": "信息发送成功",
-            "successDesc": "我们的工作人员将在 24 小时内联系您进行下一步操作。",
-            "errorTitle": "发生错误",
-            "errorDesc": "无法发送信息。请重试。"
-        }
     },
     "AboutPage": {
         "title": "关于 Lawslane",
@@ -1154,13 +896,56 @@
                 "desc": "为大型组织提供灵活定制",
                 "price": "定制",
                 "btn": "联系销售",
-                "f1": "包含专业版所有功能",
-                "f2": "专属企业咨询律师",
-                "f3": "无限量合同审核",
-                "f4": "无限用户及存储空间",
-                "f5": "API 集成 (Legal OS/HRIS)",
-                "f6": "2小时SLA响应保证",
+                "f1": "所有专业版 (Pro) 功能",
+                "f2": "根据组织定制合同审批工作流",
+                "f3": "无缝 API 继承",
+                "f4": "专属技术支持顾问",
+                "f5": "高级数据主权与白标",
+                "f6": "电子签名系统（即将推出）",
                 "f7": "电子签名系统 (高级版)"
+            },
+            "pricing_tiers": {
+                "starter": {
+                    "title": "入门版",
+                    "desc": "中小型企业和早期初创公司的理想选择",
+                    "price": "฿2,900",
+                    "btn": "免费试用 14 天",
+                    "f1": "每月下载 10 份 B2B 模板",
+                    "f2": "表单生成合同",
+                    "f3": "支持 1 个用户账户",
+                    "f4": "开具全套税务发票",
+                    "f5": "非工作时间邮件支持"
+                },
+                "pro": {
+                    "title": "专业版",
+                    "badge": "最受欢迎",
+                    "desc": "适合成长型企业，倍增信心",
+                    "price": "฿8,900",
+                    "btn": "立即开始",
+                    "f1": "无限量下载 B2B 模板",
+                    "f2": "合同生命周期管理 (CLM)",
+                    "f3": "律师每月审核 5 份合同",
+                    "f4": "支持 5 个用户账户 (含权限设置)",
+                    "f5": "税务发票与代扣代缴",
+                    "f6": "电子签名系统 (基础版)"
+                },
+                "enterprise": {
+                    "title": "企业版",
+                    "desc": "为大型组织提供灵活定制",
+                    "price": "定制",
+                    "btn": "联系销售",
+                    "f1": "所有专业版 (Pro) 功能",
+                    "f2": "根据组织定制合同审批工作流",
+                    "f3": "无缝 API 继承",
+                    "f4": "专属技术支持顾问",
+                    "f5": "高级数据主权与白标",
+                    "f6": "电子签名系统（即将推出）",
+                    "f7": "电子签名系统 (高级版)"
+                }
+            },
+            "pricing_common": {
+                "perMonth": "/月",
+                "freeTrial": "免费试用 14 天。无需信用卡。"
             }
         },
         "cta": {

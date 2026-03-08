@@ -27,7 +27,7 @@ export function LandingHero() {
 
                     <FadeIn direction="up" delay={200}>
                         <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter text-white font-headline leading-[1.1]">
-                            แคปแล้ว<span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 bg-[length:200%_auto] animate-gradient">ดีล!</span>
+                            {t('hero.brandPart1')}<span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 bg-[length:200%_auto] animate-gradient">{t('hero.brandPart2')}</span>
                             <br />
                             <span className="text-3xl md:text-5xl lg:text-6xl text-blue-100/90 font-light">
                                 {t('hero.title')}
@@ -63,7 +63,9 @@ export function LandingHero() {
                                 <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20 transition-colors">
                                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
                                 </div>
-                                <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-blue-100/90 group-hover:text-white transition-colors">Secured by Stripe</span>
+                                <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-blue-100/90 group-hover:text-white transition-colors">
+                                    {t('hero.trustStripe')}
+                                </span>
                             </div>
 
                             <div className="hidden sm:block w-px h-4 bg-white/10" />
@@ -72,7 +74,9 @@ export function LandingHero() {
                                 <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 group-hover:bg-amber-500/20 transition-colors">
                                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M12 8v8" /><path d="M8 12h8" /></svg>
                                 </div>
-                                <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-amber-100/90 group-hover:text-white transition-colors">AI Driven Security</span>
+                                <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-amber-100/90 group-hover:text-white transition-colors">
+                                    {t('hero.trustAI')}
+                                </span>
                             </div>
 
                             <div className="hidden sm:block w-px h-4 bg-white/10" />
@@ -81,7 +85,9 @@ export function LandingHero() {
                                 <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20 transition-colors">
                                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="M7 21h10" /><path d="M12 3v18" /></svg>
                                 </div>
-                                <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-emerald-100/90 group-hover:text-white transition-colors">Professional Legal Network</span>
+                                <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-emerald-100/90 group-hover:text-white transition-colors">
+                                    {t('hero.trustLegal')}
+                                </span>
                             </div>
                         </div>
                     </FadeIn>

@@ -26,10 +26,15 @@ export function useSubscription() {
                 setLoading(true);
                 // 1. Fetch User Profile
                 const userDocRef = doc(firestore, 'users', user.uid);
-                const userDocSnap = await getDoc(userDocRef);
+                let userDocSnap;
+                try {
+                    userDocSnap = await getDoc(userDocRef);
+                } catch (e: any) {
+                    console.warn("Permission denied reaching user doc in useSubscription:", e.message);
+                }
 
                 let currentProfile = null;
-                if (userDocSnap.exists()) {
+                if (userDocSnap && userDocSnap.exists()) {
                     currentProfile = userDocSnap.data() as UserProfile;
                     setProfile(currentProfile);
                 }
@@ -59,15 +64,28 @@ export function useSubscription() {
                 // 4. Fetch Cases Created in Current Period
                 const chatsRef = collection(firestore, 'chats');
 
-                // Query cases where this user is the creator (userId field) and created after period start
-                const q = query(
-                    chatsRef,
-                    where('userId', '==', user.uid),
-                    where('createdAt', '>=', periodStart)
-                );
+                try {
+                    // Query cases where this user is the creator (clientId field)
+                    const q = query(
+                        chatsRef,
+                        where('clientId', '==', user.uid)
+                    );
 
-                const querySnapshot = await getDocs(q);
-                setCasesThisMonth(querySnapshot.size);
+                    const querySnapshot = await getDocs(q);
+
+                    // Filter by date locally
+                    const recentCases = querySnapshot.docs.filter(docSnap => {
+                        const chatData = docSnap.data();
+                        if (!chatData.createdAt) return false;
+                        const createdAt = chatData.createdAt?.toDate ? chatData.createdAt.toDate() : new Date(chatData.createdAt);
+                        return createdAt >= periodStart;
+                    });
+
+                    setCasesThisMonth(recentCases.length);
+                } catch (e: any) {
+                    console.warn("Permission denied or error fetching chats in useSubscription:", e.message);
+                    setCasesThisMonth(0);
+                }
 
             } catch (error) {
                 console.error("Error fetching subscription data:", error);
