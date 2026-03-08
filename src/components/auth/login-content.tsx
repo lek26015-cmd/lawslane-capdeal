@@ -65,6 +65,16 @@ function LoginPageContent() {
     const [resetEmail, setResetEmail] = useState('');
     const [isResetting, setIsResetting] = useState(false);
 
+    // Flag to prevent double-execution in StrictMode
+    const hasAttemptedLineAutoLogin = React.useRef(false);
+
+    React.useEffect(() => {
+        if (searchParams.has('liffClientId') && !hasAttemptedLineAutoLogin.current) {
+            hasAttemptedLineAutoLogin.current = true;
+            handleLineSignIn();
+        }
+    }, [searchParams]);
+
     const handleForgotPassword = async () => {
         if (!resetEmail) {
             toast({

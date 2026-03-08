@@ -17,12 +17,8 @@ export async function POST(req: NextRequest) {
         }
 
         // 1. Verify the LINE access token and get user profile
-        const verifyRes = await fetch('https://api.line.me/oauth2/v2.1/verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-                access_token: accessToken,
-            }),
+        const verifyRes = await fetch(`https://api.line.me/oauth2/v2.1/verify?access_token=${accessToken}`, {
+            method: 'GET',
         });
 
         if (!verifyRes.ok) {
