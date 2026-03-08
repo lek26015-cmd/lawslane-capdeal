@@ -298,7 +298,11 @@ function LoginPageContent() {
     async function handleLineSignIn() {
         setIsLineLoading(true);
         try {
-            const liffId = process.env.NEXT_PUBLIC_LIFF_ID || '2009102199-91OKr2aI';
+            const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+
+            if (!liffId) {
+                throw new Error('ยังไม่ได้ตั้งค่า NEXT_PUBLIC_LIFF_ID ในระบบ');
+            }
 
             if (liffId) {
                 // Use LIFF SDK
