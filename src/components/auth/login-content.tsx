@@ -305,8 +305,9 @@ function LoginPageContent() {
                 const liffModule = await import('@line/liff');
                 const liffInstance = liffModule.default;
 
+                await liffInstance.init({ liffId });
+
                 if (!liffInstance.isLoggedIn()) {
-                    await liffInstance.init({ liffId });
                     liffInstance.login({ redirectUri: window.location.href });
                     return; // Will redirect
                 }
