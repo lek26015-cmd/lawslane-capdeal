@@ -387,21 +387,8 @@ function LoginPageContent() {
             <div className="container mx-auto flex justify-center p-4">
                 <Card className="w-full max-w-[480px] shadow-2xl rounded-3xl border-none">
                     <CardHeader className="text-center space-y-6 pt-10 pb-0">
-                        <div className="flex justify-center mb-2">
+                        <div className="flex justify-center mb-6">
                             <Logo href="/" variant="color" />
-                        </div>
-
-                        <div className="px-6">
-                            <Tabs defaultValue="customer" className="w-full">
-                                <TabsList className="grid w-full grid-cols-2 h-14 bg-slate-100 rounded-xl p-1">
-                                    <TabsTrigger value="customer" asChild className="h-full rounded-lg data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm font-medium text-base transition-all">
-                                        <Link href={`/login`}>ลูกค้า</Link>
-                                    </TabsTrigger>
-                                    <TabsTrigger value="lawyer" asChild className="h-full rounded-lg data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm font-medium text-base transition-all">
-                                        <Link href={`/lawyer-login`}>ทนายความ</Link>
-                                    </TabsTrigger>
-                                </TabsList>
-                            </Tabs>
                         </div>
 
                         <div className="space-y-2">
