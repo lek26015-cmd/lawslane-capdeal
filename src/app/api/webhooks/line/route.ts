@@ -12,8 +12,9 @@ import {
 } from '@/lib/line';
 import { chat } from '@/ai/flows/chat-flow';
 
-const LIFF_URL = process.env.NEXT_PUBLIC_LIFF_ID
-    ? `https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}`
+const liffEnv = process.env.NEXT_PUBLIC_LIFF_ID || '2009102199-91OKr2aI';
+const LIFF_URL = liffEnv
+    ? `https://liff.line.me/${liffEnv}`
     : undefined;
 
 /**

@@ -42,7 +42,7 @@ export function LiffProvider({ children }: LiffProviderProps) {
     const [lineProfile, setLineProfile] = useState<LineProfileData | null>(null);
 
     useEffect(() => {
-        const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+        const liffId = process.env.NEXT_PUBLIC_LIFF_ID || '2009102199-91OKr2aI';
         if (!liffId) {
             // LIFF not configured, skip initialization
             setIsLiffReady(true);

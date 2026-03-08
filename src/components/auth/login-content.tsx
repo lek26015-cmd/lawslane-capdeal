@@ -298,7 +298,7 @@ function LoginPageContent() {
     async function handleLineSignIn() {
         setIsLineLoading(true);
         try {
-            const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+            const liffId = process.env.NEXT_PUBLIC_LIFF_ID || '2009102199-91OKr2aI';
 
             if (liffId) {
                 // Use LIFF SDK
