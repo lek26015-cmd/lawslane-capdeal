@@ -66,6 +66,8 @@ export default function ScreenshotToContractPage() {
     const [contractData, setContractData] = useState<ContractData | null>(null);
     const [isCreating, setIsCreating] = useState(false);
     const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
+    const [createdContractId, setCreatedContractId] = useState<string | null>(null);
+    const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const { isCapped, plan, isLoading: isSubLoading } = useSubscription();
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -299,6 +301,7 @@ export default function ScreenshotToContractPage() {
 
     const handleBackToUpload = () => {
         setContractData(null);
+        setCreatedContractId(null);
     };
 
     const formatPrice = (price: number) => {
@@ -390,6 +393,13 @@ export default function ScreenshotToContractPage() {
 
     const proceedCreateContract = async () => {
         if (!contractData) return;
+
+        // If we already created a contract during PDF preview, just redirect
+        if (createdContractId) {
+            router.push(`/${locale}/contract/${createdContractId}`);
+            return;
+        }
+
         setIsCreating(true);
         try {
             // Build employer object, only including defined fields
@@ -414,6 +424,8 @@ export default function ScreenshotToContractPage() {
                 status: 'draft',
                 ownerId: user?.uid || 'anonymous',
             });
+
+            setCreatedContractId(id);
 
             toast({
                 title: "สร้างสัญญาสำเร็จ",
@@ -920,13 +932,57 @@ export default function ScreenshotToContractPage() {
                                         </Button>
                                         <Button
                                             onClick={async () => {
-                                                if (contractData) {
-                                                    setIsDownloadingPDF(true);
-                                                    try {
-                                                        await generateContractPDF(contractData);
-                                                    } finally {
-                                                        setIsDownloadingPDF(false);
+                                                if (!contractData) return;
+
+                                                // Check if user is logged in
+                                                if (!user) {
+                                                    setShowLoginDialog(true);
+                                                    return;
+                                                }
+
+                                                // Check if already capped
+                                                if (isCapped && !createdContractId) {
+                                                    toast({
+                                                        title: "ถึงขีดจำกัดแล้ว",
+                                                        description: `แพ็กเกจ ${plan.name} สร้างได้สูงสุด ${plan.limits.dealsPerMonth} ครั้งต่อเดือน`,
+                                                        variant: 'destructive',
+                                                    });
+                                                    router.push(`/${locale}/pricing`);
+                                                    return;
+                                                }
+
+                                                setIsDownloadingPDF(true);
+                                                try {
+                                                    // If we haven't created a contract record yet for this analysis, create one
+                                                    if (!createdContractId) {
+                                                        const employer: Record<string, string> = { name: contractData.employer || '' };
+                                                        if (contractData.employerId) employer.id_card = contractData.employerId;
+                                                        if (contractData.employerAddress) employer.address = contractData.employerAddress;
+
+                                                        const contractor: Record<string, string> = { name: contractData.contractor || '' };
+                                                        if (contractData.contractorId) contractor.id_card = contractData.contractorId;
+                                                        if (contractData.contractorAddress) contractor.address = contractData.contractorAddress;
+
+                                                        const id = await contractService.createContract({
+                                                            title: 'สัญญาจ้างทำของ (ดาวน์โหลด PDF)',
+                                                            employer: employer as any,
+                                                            contractor: contractor as any,
+                                                            task: contractData.task || '',
+                                                            price: contractData.price || 0,
+                                                            deposit: contractData.deposit || 0,
+                                                            deadline: contractData.deadline || '',
+                                                            paymentTerms: contractData.paymentTerms || '',
+                                                            status: 'draft',
+                                                            ownerId: user.uid,
+                                                        });
+                                                        setCreatedContractId(id);
                                                     }
+
+                                                    await generateContractPDF(contractData);
+                                                } catch (error) {
+                                                    console.error('PDF Download Error:', error);
+                                                } finally {
+                                                    setIsDownloadingPDF(false);
                                                 }
                                             }}
                                             disabled={isDownloadingPDF}

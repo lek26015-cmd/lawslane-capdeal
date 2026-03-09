@@ -61,29 +61,29 @@ export function useSubscription() {
                     }
                 }
 
-                // 4. Fetch Cases Created in Current Period
-                const chatsRef = collection(firestore, 'chats');
+                // 4. Fetch Contracts Created in Current Period
+                const contractsRef = collection(firestore, 'contracts');
 
                 try {
-                    // Query cases where this user is the creator (clientId field)
+                    // Query contracts where this user is the owner (ownerId field)
                     const q = query(
-                        chatsRef,
-                        where('clientId', '==', user.uid)
+                        contractsRef,
+                        where('ownerId', '==', user.uid)
                     );
 
                     const querySnapshot = await getDocs(q);
 
                     // Filter by date locally
                     const recentCases = querySnapshot.docs.filter(docSnap => {
-                        const chatData = docSnap.data();
-                        if (!chatData.createdAt) return false;
-                        const createdAt = chatData.createdAt?.toDate ? chatData.createdAt.toDate() : new Date(chatData.createdAt);
+                        const contractData = docSnap.data();
+                        if (!contractData.createdAt) return false;
+                        const createdAt = contractData.createdAt?.toDate ? contractData.createdAt.toDate() : new Date(contractData.createdAt);
                         return createdAt >= periodStart;
                     });
 
                     setCasesThisMonth(recentCases.length);
                 } catch (e: any) {
-                    console.warn("Permission denied or error fetching chats in useSubscription:", e.message);
+                    console.warn("Permission denied or error fetching contracts in useSubscription:", e.message);
                     setCasesThisMonth(0);
                 }
 
