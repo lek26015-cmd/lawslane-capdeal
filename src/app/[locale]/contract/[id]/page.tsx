@@ -50,6 +50,7 @@ export default function ContractSigningPage() {
 
     // Upload states
     const [isUploading, setIsUploading] = useState(false);
+    const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
     useEffect(() => {
         if (!id) return;
@@ -174,6 +175,18 @@ export default function ContractSigningPage() {
         } catch (error) {
             console.error('Error signing contract:', error);
             // Could add toast error here
+        }
+    };
+
+    const handleDownloadPDF = async () => {
+        if (!contract) return;
+        setIsGeneratingPDF(true);
+        try {
+            await generateContractPDF(contract as any);
+        } catch (error) {
+            console.error('PDF generation failed:', error);
+        } finally {
+            setIsGeneratingPDF(false);
         }
     };
 
@@ -404,11 +417,12 @@ export default function ContractSigningPage() {
 
                             {contract.status === 'signed' && (
                                 <Button
-                                    onClick={() => generateContractPDF(contract as any)}
+                                    onClick={handleDownloadPDF}
+                                    disabled={isGeneratingPDF}
                                     className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/10"
                                 >
-                                    <Download className="w-4 h-4 mr-2" />
-                                    PDF
+                                    {isGeneratingPDF ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                                    {isGeneratingPDF ? 'กำลังสร้าง...' : 'PDF'}
                                 </Button>
                             )}
                         </div>

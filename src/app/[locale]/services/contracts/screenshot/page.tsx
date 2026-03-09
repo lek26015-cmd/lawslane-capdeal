@@ -65,6 +65,7 @@ export default function ScreenshotToContractPage() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [contractData, setContractData] = useState<ContractData | null>(null);
     const [isCreating, setIsCreating] = useState(false);
+    const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
     const { isCapped, plan, isLoading: isSubLoading } = useSubscription();
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -918,11 +919,21 @@ export default function ScreenshotToContractPage() {
                                             สร้างลิงก์สัญญาออนไลน์
                                         </Button>
                                         <Button
-                                            onClick={() => contractData && generateContractPDF(contractData)}
+                                            onClick={async () => {
+                                                if (contractData) {
+                                                    setIsDownloadingPDF(true);
+                                                    try {
+                                                        await generateContractPDF(contractData);
+                                                    } finally {
+                                                        setIsDownloadingPDF(false);
+                                                    }
+                                                }
+                                            }}
+                                            disabled={isDownloadingPDF}
                                             className="w-full bg-white border-2 border-slate-200 text-slate-700 hover:bg-slate-50 rounded-full h-12 text-lg transition-all hover:-translate-y-1"
                                         >
-                                            <CheckCircle className="w-5 h-5 mr-2" />
-                                            โหลด PDF เท่านั้น
+                                            {isDownloadingPDF ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <CheckCircle className="w-5 h-5 mr-2" />}
+                                            {isDownloadingPDF ? 'กำลังสร้าง...' : 'โหลด PDF เท่านั้น'}
                                         </Button>
                                     </div>
                                 </CardContent>

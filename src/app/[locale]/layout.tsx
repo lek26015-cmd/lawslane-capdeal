@@ -61,7 +61,7 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://securetoken.googleapis.com" />
         <link rel="preconnect" href="https://firestore.googleapis.com" />
         <link rel="preconnect" href="https://www.googleapis.com" />
-        <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Sarabun:wght@400;700&display=swap" rel="stylesheet" />
 
         {/* JSON-LD Structured Data for Google Search Logo */}
         <script
