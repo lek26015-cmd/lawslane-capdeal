@@ -190,7 +190,7 @@ export default function Header({ setUserRole, domainType = 'main' }: { setUserRo
               {/* Vertical Divider */}
               <div className="h-6 w-px bg-slate-700 mx-1" />
 
-              {isLoading ? null : user ? (
+              {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className={cn("flex items-center gap-2 h-11 px-4 rounded-xl", loginButtonClasses)}>
@@ -249,12 +249,18 @@ export default function Header({ setUserRole, domainType = 'main' }: { setUserRo
                 </DropdownMenu>
               ) : (
                 <Link href="/login">
-                  <Button className={cn(
-                    "flex items-center gap-3 h-11 px-6 rounded-2xl border border-slate-700 bg-white/5 hover:bg-white/10 transition-all text-white font-bold",
-                    "shadow-sm hover:shadow-md"
-                  )}>
-                    <LogOut className="h-5 w-5 transform rotate-180" />
-                    <span>{t('login')}</span>
+                  <Button
+                    disabled={isLoading}
+                    className={cn(
+                      "flex items-center gap-3 h-11 px-6 rounded-2xl border border-slate-700 bg-white/5 hover:bg-white/10 transition-all text-white font-bold",
+                      "shadow-sm hover:shadow-md"
+                    )}>
+                    {isLoading ? (
+                      <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <LogOut className="h-5 w-5 transform rotate-180" />
+                    )}
+                    <span>{isLoading ? '...' : t('login')}</span>
                   </Button>
                 </Link>
               )}

@@ -71,9 +71,13 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
               const contentType = res.headers.get('content-type');
               if (res.ok && contentType && contentType.includes('application/json')) {
                 const data = await res.json();
-                if (data.authenticated) {
-                  // We have a server session, but Firebase Client SDK doesn't have the user yet.
-                  setUserAuthState(prev => ({ ...prev, user: { uid: data.uid, email: data.email } as any }));
+                if (data.authenticated && data.customToken) {
+                  // We have a server session and a custom token.
+                  // Sign in the client SDK using the custom token to ensure all services (Firestore, etc.) work.
+                  const { signInWithCustomToken } = await import('firebase/auth');
+                  await signInWithCustomToken(auth, data.customToken);
+
+                  // onAuthStateChanged will trigger again with the new user, so we return here.
                   return;
                 }
               } else {

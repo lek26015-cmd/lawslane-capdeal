@@ -41,7 +41,7 @@ export async function POST(request: Request) {
         if (!auth) {
             return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
         }
-        
+
         const sessionCookie = await auth.auth().createSessionCookie(idToken, { expiresIn });
 
         // Store the verified session cookie
@@ -72,15 +72,26 @@ export async function GET() {
         // Validate via Firebase Admin
         const auth = await initAdmin();
         if (!auth) {
-             return NextResponse.json({ authenticated: false }, { status: 401 });
+            return NextResponse.json({ authenticated: false }, { status: 401 });
         }
         try {
             const decodedToken = await auth.auth().verifySessionCookie(sessionCookie, true);
-            return NextResponse.json({ authenticated: true, uid: decodedToken.uid });
+
+            // Generate a custom token for client-side SSO
+            const customToken = await auth.auth().createCustomToken(decodedToken.uid);
+
+            return NextResponse.json({
+                authenticated: true,
+                uid: decodedToken.uid,
+                email: decodedToken.email,
+                customToken
+            });
         } catch (error) {
+            console.error('Session verification or token generation failed:', error);
             return NextResponse.json({ authenticated: false }, { status: 401 });
         }
     } catch (error) {
+        console.error('Session GET error:', error);
         return NextResponse.json({ authenticated: false }, { status: 401 });
     }
 }

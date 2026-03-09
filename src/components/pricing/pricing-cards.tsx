@@ -7,7 +7,7 @@ import { Check, CheckCircle2, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { SUBSCRIPTION_PLANS, PlanId } from '@/lib/subscription';
 import { useUser } from '@/firebase';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -23,6 +23,7 @@ export function PricingCards() {
     const tCommon = useTranslations('HomePage.pricing_common');
 
     const handleSubscribe = async (planId: PlanId) => {
+        setLoadingPlan(planId);
         if (!user) {
             toast({
                 title: 'กรุณาเข้าสู่ระบบ',
@@ -30,16 +31,19 @@ export function PricingCards() {
                 variant: 'destructive',
             });
             router.push('/login');
+            setLoadingPlan(null);
             return;
         }
 
         if (planId === 'free') {
             router.push('/services/contracts/screenshot');
+            setLoadingPlan(null);
             return;
         }
 
         const interval = isYearly ? 'year' : 'month';
         router.push(`/checkout?planId=${planId}&interval=${interval}`);
+        // We don't set loadingPlan to null here as we are navigating away
     };
 
     // Filter out free plan from the carousel or showing only 3 main plans like the screenshot if needed
@@ -157,7 +161,7 @@ export function PricingCards() {
                             <CardFooter className="px-8 pb-10">
                                 <Button
                                     onClick={() => handleSubscribe(planId)}
-                                    disabled={isUserLoading || loadingPlan !== null}
+                                    disabled={loadingPlan !== null}
                                     className={cn(
                                         "w-full py-7 text-base font-bold rounded-2xl transition-all duration-300 shadow-sm",
                                         isPro
