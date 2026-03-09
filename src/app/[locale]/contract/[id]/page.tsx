@@ -766,8 +766,8 @@ export default function ContractSigningPage() {
                             <X className="w-6 h-6" />
                         </Button>
                     </div>
-                    <div className="flex justify-center p-4 md:p-8">
-                        <div className="bg-white shadow-2xl rounded-sm w-full max-w-[210mm] aspect-[1/1.414] relative overflow-hidden p-[20mm] font-serif leading-[1.6]">
+                    <div className="flex justify-center p-0 md:p-8">
+                        <div className="bg-white shadow-2xl md:rounded-sm w-full max-w-[210mm] relative overflow-hidden p-6 md:p-[20mm] font-serif leading-[1.6] min-h-screen md:min-h-0 md:aspect-[1/1.414]">
                             {/* Watermark in Full Preview */}
                             <div className="absolute inset-0 flex items-center justify-center opacity-[0.04] pointer-events-none z-0">
                                 <img src="/images/logo-lawslane-transparent-color.png" alt="Lawslane Watermark" className="w-[70%]" />
@@ -786,18 +786,18 @@ export default function ContractSigningPage() {
                                 <div className="space-y-4">
                                     <p>สัญญาฉบับนี้ทำขึ้นระหว่าง</p>
 
-                                    <div className="grid grid-cols-2 gap-8 my-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 my-4">
                                         <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 space-y-2">
                                             <p className="text-[10px] text-slate-400 uppercase font-sans tracking-wider">ผู้ว่าจ้าง</p>
-                                            <p><span className="text-slate-400">ชื่อ:</span> <strong>{contract.employer.name || '.....................'}</strong></p>
-                                            <p><span className="text-slate-400">บัตรประชาชน:</span> <strong>{contract.employer.id_card || '.....................'}</strong></p>
-                                            <p><span className="text-slate-400">ที่อยู่:</span> <strong>{contract.employer.address || '.....................'}</strong></p>
+                                            <p className="flex flex-wrap gap-x-2"><span className="text-slate-400">ชื่อ:</span> <strong>{contract.employer.name || '.....................'}</strong></p>
+                                            <p className="flex flex-wrap gap-x-2"><span className="text-slate-400">บัตรประชาชน:</span> <strong>{contract.employer.id_card || '.....................'}</strong></p>
+                                            <p className="flex flex-wrap gap-x-2"><span className="text-slate-400">ที่อยู่:</span> <strong>{contract.employer.address || '.....................'}</strong></p>
                                         </div>
                                         <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 space-y-2">
                                             <p className="text-[10px] text-slate-400 uppercase font-sans tracking-wider">ผู้รับจ้าง</p>
-                                            <p><span className="text-slate-400">ชื่อ:</span> <strong>{contract.contractor.name || '.....................'}</strong></p>
-                                            <p><span className="text-slate-400">บัตรประชาชน:</span> <strong>{contract.contractor.id_card || '.....................'}</strong></p>
-                                            <p><span className="text-slate-400">ที่อยู่:</span> <strong>{contract.contractor.address || '.....................'}</strong></p>
+                                            <p className="flex flex-wrap gap-x-2"><span className="text-slate-400">ชื่อ:</span> <strong>{contract.contractor.name || '.....................'}</strong></p>
+                                            <p className="flex flex-wrap gap-x-2"><span className="text-slate-400">บัตรประชาชน:</span> <strong>{contract.contractor.id_card || '.....................'}</strong></p>
+                                            <p className="flex flex-wrap gap-x-2"><span className="text-slate-400">ที่อยู่:</span> <strong>{contract.contractor.address || '.....................'}</strong></p>
                                         </div>
                                     </div>
 
@@ -819,15 +819,15 @@ export default function ContractSigningPage() {
                                     <p>หากผู้รับจ้างไม่สามารถทำงานให้แล้วเสร็จตามกำหนด หรือเจตนาทิ้งงาน ผู้ว่าจ้างมีสิทธิบอกเลิกสัญญาและเรียกร้องค่าเสียหายได้ทันที</p>
                                 </div>
 
-                                <div className="flex justify-between items-end pt-12">
-                                    <div className="text-center space-y-2 w-[40%]">
+                                <div className="flex flex-col md:flex-row justify-between items-center md:items-end gap-8 md:gap-4 pt-12">
+                                    <div className="text-center space-y-2 w-full md:w-[45%]">
                                         <div className="border-b border-dotted border-slate-900 h-16 flex items-end justify-center pb-1">
                                             {contract.employer.signature && <img src={contract.employer.signature} alt="Sign" className="max-h-12" />}
                                         </div>
                                         <p className="text-[12px]">ลงชื่อ ผู้ว่าจ้าง</p>
                                         <p className="text-[12px]">({contract.employer.name || '.....................'})</p>
                                     </div>
-                                    <div className="text-center space-y-2 w-[40%]">
+                                    <div className="text-center space-y-2 w-full md:w-[45%]">
                                         <div className="border-b border-dotted border-slate-900 h-16 flex items-end justify-center pb-1">
                                             {contract.contractor.signature && <img src={contract.contractor.signature} alt="Sign" className="max-h-12" />}
                                         </div>
