@@ -60,8 +60,14 @@ export async function generateContractPDF(data: ContractData) {
     const idBlank = '______________________';
 
     const htmlContent = `
-    <div style="font-family: 'Sarabun', sans-serif; font-size: 14px; line-height: 1.6; color: #333; padding: 40px 50px; width: 794px; background: white;">
-        <h1 class="title" style="text-align: center; font-size: 24px; font-weight: bold; color: #0B3979; margin-bottom: 5px;">สัญญาจ้าง</h1>
+    <div style="font-family: 'Sarabun', sans-serif; font-size: 14px; line-height: 1.6; color: #333; padding: 40px 50px; width: 794px; background: white; position: relative; overflow: hidden;">
+        <!-- Watermark -->
+        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 0; pointer-events: none;">
+            <span style="font-size: 120px; font-weight: bold; color: rgba(11, 57, 121, 0.05); transform: rotate(-45deg); white-space: nowrap; text-transform: uppercase; letter-spacing: 12px; font-family: sans-serif;">Lawslane</span>
+        </div>
+        
+        <div style="position: relative; z-index: 10;">
+            <h1 class="title" style="text-align: center; font-size: 24px; font-weight: bold; color: #0B3979; margin-bottom: 5px;">สัญญาจ้าง</h1>
         <p class="subtitle" style="text-align: center; font-size: 16px; color: #666; margin-bottom: 20px;">(ฉบับย่อ)</p>
         
         <p class="date" style="text-align: right; margin-bottom: 15px; font-size: 14px;">วันที่: ${formatThaiDate(new Date())}</p>
@@ -126,6 +132,7 @@ export async function generateContractPDF(data: ContractData) {
         </div>
         
         <p class="footer" style="text-align: center; margin-top: 50px; font-size: 11px; color: #999;">เอกสารนี้ถูกสร้างโดยระบบอัตโนมัติจาก Lawslane</p>
+        </div>
     </div>
     `;
 
