@@ -416,26 +416,24 @@ export default function ContractSigningPage() {
                                 </>
                             )}
 
-                            {contract.status === 'signed' && (
-                                <div className="flex gap-2">
-                                    <Button
-                                        onClick={() => setShowFullView(true)}
-                                        variant="outline"
-                                        className="border-slate-200 text-slate-700"
-                                    >
-                                        <Eye className="w-4 h-4 mr-2" />
-                                        ดูสัญญาเต็มแผ่น
-                                    </Button>
-                                    <Button
-                                        onClick={handleDownloadPDF}
-                                        disabled={isGeneratingPDF}
-                                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/10"
-                                    >
-                                        {isGeneratingPDF ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-                                        {isGeneratingPDF ? 'กำลังสร้าง...' : 'PDF'}
-                                    </Button>
-                                </div>
-                            )}
+                            <div className="flex gap-2">
+                                <Button
+                                    onClick={() => setShowFullView(true)}
+                                    variant="outline"
+                                    className="border-slate-200 text-slate-700"
+                                >
+                                    <Eye className="w-4 h-4 mr-2" />
+                                    ดูสัญญาเต็มแผ่น
+                                </Button>
+                                <Button
+                                    onClick={handleDownloadPDF}
+                                    disabled={isGeneratingPDF}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/10"
+                                >
+                                    {isGeneratingPDF ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                                    {isGeneratingPDF ? 'กำลังสร้าง...' : 'PDF'}
+                                </Button>
+                            </div>
                         </div>
                     </div>
 
