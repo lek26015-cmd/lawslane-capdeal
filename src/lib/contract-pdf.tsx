@@ -63,8 +63,7 @@ export async function generateContractPDF(data: ContractData) {
     <div style="font-family: 'Sarabun', sans-serif; font-size: 14px; line-height: 1.6; color: #333; padding: 40px 50px; width: 794px; background: white; position: relative; overflow: hidden;">
         <!-- Watermark -->
         <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 0; pointer-events: none; opacity: 0.04;">
-            <img src="/images/logo-lawslane-transparent-color.png" style="width: 300px; margin-bottom: 20px;" />
-            <span style="font-size: 80px; font-weight: bold; color: #0B3979; transform: rotate(-45deg); white-space: nowrap; text-transform: uppercase; letter-spacing: 12px; font-family: sans-serif;">Lawslane</span>
+            <img src="/images/logo-lawslane-transparent-color.png" style="width: 350px;" />
         </div>
         
         <div style="position: relative; z-index: 10;">
