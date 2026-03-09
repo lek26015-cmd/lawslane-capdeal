@@ -29,7 +29,9 @@ import {
     Link as LinkIcon,
     LogIn,
     ShieldCheck,
-    HelpCircle
+    HelpCircle,
+    Copy,
+    ClipboardCheck
 } from 'lucide-react';
 
 
@@ -296,6 +298,51 @@ export default function ScreenshotToContractPage() {
 
     const handleBackToUpload = () => {
         setContractData(null);
+    };
+
+    const formatPrice = (price: number) => {
+        return new Intl.NumberFormat('th-TH', {
+            style: 'currency',
+            currency: 'THB',
+            minimumFractionDigits: 0
+        }).format(price);
+    };
+
+    const handleCopyData = () => {
+        if (!contractData) return;
+
+        const text = `📋 ข้อมูลสัญญาเบื้องต้น (กรุณาตรวจสอบและส่งคืน)
+
+👤 ผู้ว่าจ้าง: ${contractData.employer || '_______'}
+🆔 เลขบัตรประชาชน: ${contractData.employerId || '_______'}
+🏠 ที่อยู่: ${contractData.employerAddress || '_______'}
+
+🔧 ผู้รับจ้าง: ${contractData.contractor || '_______'}
+🆔 เลขบัตรประชาชน: ${contractData.contractorId || '_______'}
+🏠 ที่อยู่: ${contractData.contractorAddress || '_______'}
+
+📝 ขอบเขตงาน: ${contractData.task || '_______'}
+💰 ราคารวม: ${contractData.price ? formatPrice(contractData.price) : '_______'}
+💸 มัดจำ: ${contractData.deposit ? formatPrice(contractData.deposit) : '_______'}
+📅 กำหนดส่งงาน: ${contractData.deadline || '_______'}
+💳 เงื่อนไขการชำระเงิน: ${contractData.paymentTerms || '_______'}
+
+---
+สร้างโดย CapDeal by Lawslane`;
+
+        navigator.clipboard.writeText(text).then(() => {
+            toast({
+                title: "คัดลอกข้อมูลแล้ว",
+                description: "ข้อมูลถูกคัดลอกไปยังคลิปบอร์ดแล้ว คุณสามารถส่งให้คู่สัญญาได้ทันที",
+                className: "bg-blue-600 text-white border-none",
+            });
+        }).catch(() => {
+            toast({
+                title: "เกิดข้อผิดพลาด",
+                description: "ไม่สามารถคัดลอกข้อมูลได้ กรุณาลองคัดลอกด้วยตนเอง",
+                variant: "destructive"
+            });
+        });
     };
 
     const handleCreateContract = async () => {
@@ -850,6 +897,17 @@ export default function ScreenshotToContractPage() {
                                             </div>
                                         )}
                                     </div>
+
+                                    {/* Copy Data Button */}
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleCopyData}
+                                        className="w-full border-2 border-blue-100 bg-blue-50/30 text-blue-700 hover:bg-blue-100 hover:text-blue-800 rounded-2xl h-14 text-base font-semibold transition-all group"
+                                    >
+                                        <Copy className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" />
+                                        คัดลอกข้อมูลเพื่อส่งให้คู่สัญญา
+                                    </Button>
+
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                                         <Button
                                             onClick={handleCreateContract}
