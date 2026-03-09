@@ -19,7 +19,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { SignaturePad } from '@/components/ui/signature-pad';
-import { FileSignature, AlertTriangle, Shield, CheckCircle, Edit, Plus, Calendar, User, Download, Link as LinkIcon, Share2, Loader2, Paperclip, Lock, FileText, Trash2 } from 'lucide-react';
+import { FileSignature, AlertTriangle, Shield, CheckCircle, Edit, Plus, Calendar, User, Download, Link as LinkIcon, Share2, Loader2, Paperclip, Lock, FileText, Trash2, Eye, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { generateContractPDF } from '@/lib/contract-pdf';
@@ -51,6 +51,7 @@ export default function ContractSigningPage() {
     // Upload states
     const [isUploading, setIsUploading] = useState(false);
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+    const [showFullView, setShowFullView] = useState(false);
 
     useEffect(() => {
         if (!id) return;
@@ -416,14 +417,24 @@ export default function ContractSigningPage() {
                             )}
 
                             {contract.status === 'signed' && (
-                                <Button
-                                    onClick={handleDownloadPDF}
-                                    disabled={isGeneratingPDF}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/10"
-                                >
-                                    {isGeneratingPDF ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-                                    {isGeneratingPDF ? 'กำลังสร้าง...' : 'PDF'}
-                                </Button>
+                                <div className="flex gap-2">
+                                    <Button
+                                        onClick={() => setShowFullView(true)}
+                                        variant="outline"
+                                        className="border-slate-200 text-slate-700"
+                                    >
+                                        <Eye className="w-4 h-4 mr-2" />
+                                        ดูสัญญาเต็มแผ่น
+                                    </Button>
+                                    <Button
+                                        onClick={handleDownloadPDF}
+                                        disabled={isGeneratingPDF}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/10"
+                                    >
+                                        {isGeneratingPDF ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                                        {isGeneratingPDF ? 'กำลังสร้าง...' : 'PDF'}
+                                    </Button>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -436,9 +447,14 @@ export default function ContractSigningPage() {
                                 <div className="absolute inset-0 pointer-events-none border-[12px] border-white/50 z-10 mix-blend-overlay"></div>
 
                                 <CardContent className="p-10 md:p-16 space-y-8 font-serif leading-[1.8] text-slate-800 text-sm md:text-base relative z-20">
-                                    <div className="text-center space-y-4 mb-8">
-                                        {/* Optional: Add a Thai Garuda emblem placeholder here if needed, or just a nice separator */}
-                                        <h2 className="text-3xl font-bold tracking-wide text-slate-900 mb-2">สัญญาจ้างทำของ</h2>
+                                    {/* Watermark in Web UI */}
+                                    <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none z-0">
+                                        <img src="/images/logo-lawslane-transparent-color.png" alt="Lawslane Watermark" className="w-[80%] max-w-[400px]" />
+                                    </div>
+
+                                    <div className="text-center space-y-4 mb-8 relative z-10">
+                                        <h2 className="text-3xl font-bold tracking-wide text-slate-900 mb-1">สัญญาจ้าง</h2>
+                                        <p className="text-slate-500 font-sans">(ฉบับย่อ)</p>
                                     </div>
 
                                     <div className="flex flex-col items-end text-sm md:text-base mb-8 space-y-2">
@@ -738,6 +754,108 @@ export default function ContractSigningPage() {
                     </div>
                 </FadeIn>
             </div>
+
+            {/* Full Page View Modal */}
+            <Dialog open={showFullView} onOpenChange={setShowFullView}>
+                <DialogContent className="max-w-[90vw] md:max-w-4xl max-h-[90vh] overflow-y-auto p-0 border-none bg-slate-900/50 backdrop-blur-md">
+                    <div className="sticky top-0 right-0 z-[100] flex justify-end p-4">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setShowFullView(false)}
+                            className="text-white hover:bg-white/20 rounded-full"
+                        >
+                            <X className="w-6 h-6" />
+                        </Button>
+                    </div>
+                    <div className="flex justify-center p-4 md:p-8">
+                        <div className="bg-white shadow-2xl rounded-sm w-full max-w-[210mm] aspect-[1/1.414] relative overflow-hidden p-[20mm] font-serif leading-[1.6]">
+                            {/* Watermark in Full Preview */}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-[0.04] pointer-events-none z-0">
+                                <img src="/images/logo-lawslane-transparent-color.png" alt="Lawslane Watermark" className="w-[70%]" />
+                            </div>
+
+                            <div className="relative z-10 space-y-8 text-slate-800 text-[14px]">
+                                <div className="text-center space-y-2 mb-6">
+                                    <h1 className="text-2xl font-bold text-slate-900">สัญญาจ้าง</h1>
+                                    <p className="text-slate-500 font-sans">(ฉบับย่อ)</p>
+                                </div>
+
+                                <div className="text-right text-[14px] mb-8">
+                                    วันที่: {formatDate(contract.createdAt).split(' ').slice(0, 3).join(' ')}
+                                </div>
+
+                                <div className="space-y-4">
+                                    <p>สัญญาฉบับนี้ทำขึ้นระหว่าง</p>
+
+                                    <div className="grid grid-cols-2 gap-8 my-4">
+                                        <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 space-y-2">
+                                            <p className="text-[10px] text-slate-400 uppercase font-sans tracking-wider">ผู้ว่าจ้าง</p>
+                                            <p><span className="text-slate-400">ชื่อ:</span> <strong>{contract.employer.name || '.....................'}</strong></p>
+                                            <p><span className="text-slate-400">บัตรประชาชน:</span> <strong>{contract.employer.id_card || '.....................'}</strong></p>
+                                            <p><span className="text-slate-400">ที่อยู่:</span> <strong>{contract.employer.address || '.....................'}</strong></p>
+                                        </div>
+                                        <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 space-y-2">
+                                            <p className="text-[10px] text-slate-400 uppercase font-sans tracking-wider">ผู้รับจ้าง</p>
+                                            <p><span className="text-slate-400">ชื่อ:</span> <strong>{contract.contractor.name || '.....................'}</strong></p>
+                                            <p><span className="text-slate-400">บัตรประชาชน:</span> <strong>{contract.contractor.id_card || '.....................'}</strong></p>
+                                            <p><span className="text-slate-400">ที่อยู่:</span> <strong>{contract.contractor.address || '.....................'}</strong></p>
+                                        </div>
+                                    </div>
+
+                                    <p>โดยทั้งสองฝ่ายตกลงทำสัญญากันดังมีข้อความต่อไปนี้</p>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <p><strong>ข้อ 1. เนื้องานที่จ้าง</strong></p>
+                                    <p>ผู้รับจ้างตกลงรับจ้างทำงาน: <strong>{contract.task}</strong></p>
+
+                                    <p><strong>ข้อ 2. ค่าจ้างและการชำระเงิน</strong></p>
+                                    <p>ตกลงค่าจ้างเป็นจำนวนเงินทั้งสิ้น: <strong>{contract.price.toLocaleString()} บาท</strong> {contract.deposit ? `(มัดจำแล้ว: ${contract.deposit.toLocaleString()} บาท)` : ''}</p>
+                                    <p>การชำระเงินส่วนที่เหลือ: <strong>{contract.paymentTerms || 'ตามตกลงกัน'}</strong></p>
+
+                                    <p><strong>ข้อ 3. กำหนดการส่งมอบงาน</strong></p>
+                                    <p>ผู้รับจ้างตกลงจะทำงานให้แล้วเสร็จภายใน: <strong>{contract.deadline}</strong></p>
+
+                                    <p><strong>ข้อ 4. การบอกเลิกสัญญา</strong></p>
+                                    <p>หากผู้รับจ้างไม่สามารถทำงานให้แล้วเสร็จตามกำหนด หรือเจตนาทิ้งงาน ผู้ว่าจ้างมีสิทธิบอกเลิกสัญญาและเรียกร้องค่าเสียหายได้ทันที</p>
+                                </div>
+
+                                <div className="flex justify-between items-end pt-12">
+                                    <div className="text-center space-y-2 w-[40%]">
+                                        <div className="border-b border-dotted border-slate-900 h-16 flex items-end justify-center pb-1">
+                                            {contract.employer.signature && <img src={contract.employer.signature} alt="Sign" className="max-h-12" />}
+                                        </div>
+                                        <p className="text-[12px]">ลงชื่อ ผู้ว่าจ้าง</p>
+                                        <p className="text-[12px]">({contract.employer.name || '.....................'})</p>
+                                    </div>
+                                    <div className="text-center space-y-2 w-[40%]">
+                                        <div className="border-b border-dotted border-slate-900 h-16 flex items-end justify-center pb-1">
+                                            {contract.contractor.signature && <img src={contract.contractor.signature} alt="Sign" className="max-h-12" />}
+                                        </div>
+                                        <p className="text-[12px]">ลงชื่อ ผู้รับจ้าง</p>
+                                        <p className="text-[12px]">({contract.contractor.name || '.....................'})</p>
+                                    </div>
+                                </div>
+
+                                <div className="text-center pt-8 text-[10px] text-slate-400 font-sans">
+                                    เอกสารนี้ถูกสร้างโดยระบบอัตโนมัติจาก Lawslane
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="p-6 bg-white border-t flex justify-center sticky bottom-0">
+                        <Button
+                            onClick={handleDownloadPDF}
+                            disabled={isGeneratingPDF}
+                            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8"
+                        >
+                            {isGeneratingPDF ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                            ดาวน์โหลดเป็น PDF
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
