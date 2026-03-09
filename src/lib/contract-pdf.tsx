@@ -62,14 +62,12 @@ export async function generateContractPDF(data: ContractData) {
     const htmlContent = `
     <div style="font-family: 'Sarabun', sans-serif; font-size: 14px; line-height: 1.6; color: #333; padding: 40px 50px; width: 794px; background: white; position: relative; overflow: hidden;">
         <!-- Watermark -->
-        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 0; pointer-events: none;">
-            <span style="font-size: 120px; font-weight: bold; color: rgba(11, 57, 121, 0.05); transform: rotate(-45deg); white-space: nowrap; text-transform: uppercase; letter-spacing: 12px; font-family: sans-serif;">Lawslane</span>
+        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 0; pointer-events: none; opacity: 0.04;">
+            <img src="/images/logo-lawslane-transparent-color.png" style="width: 300px; margin-bottom: 20px;" />
+            <span style="font-size: 80px; font-weight: bold; color: #0B3979; transform: rotate(-45deg); white-space: nowrap; text-transform: uppercase; letter-spacing: 12px; font-family: sans-serif;">Lawslane</span>
         </div>
         
         <div style="position: relative; z-index: 10;">
-            <div style="text-align: center; margin-bottom: 15px;">
-                <img src="/images/logo-lawslane-transparent-color.png" style="height: 60px; display: block; margin: 0 auto;" />
-            </div>
             <h1 class="title" style="text-align: center; font-size: 24px; font-weight: bold; color: #0B3979; margin-bottom: 5px;">สัญญาจ้าง</h1>
         <p class="subtitle" style="text-align: center; font-size: 16px; color: #666; margin-bottom: 20px;">(ฉบับย่อ)</p>
         
