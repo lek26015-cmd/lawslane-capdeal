@@ -60,7 +60,7 @@ function CheckoutContent() {
                 body: JSON.stringify({
                     planId,
                     userId: user.uid,
-                    customerEmail: user.email,
+                    customerEmail: user.email || undefined,
                     billingInterval,
                 }),
             });

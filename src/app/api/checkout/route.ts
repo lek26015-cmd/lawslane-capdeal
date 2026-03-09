@@ -36,11 +36,11 @@ export async function POST(req: NextRequest) {
         const paymentMethods = mode === 'subscription' ? ['card'] : ['card', 'promptpay'];
 
         console.log('Creating Stripe embedded session for:', { planId, userId, customerEmail, billingInterval, priceId });
-        const session = await stripe.checkout.sessions.create({
+
+        const sessionParams: any = {
             ui_mode: 'embedded',
             payment_method_types: paymentMethods as any,
             billing_address_collection: 'auto',
-            customer_email: customerEmail,
             line_items: [
                 {
                     price: priceId,
@@ -54,7 +54,14 @@ export async function POST(req: NextRequest) {
                 planId: planId,
                 billingInterval: billingInterval || 'month',
             },
-        });
+        };
+
+        // Only add customer_email if it's a valid non-empty string
+        if (customerEmail && typeof customerEmail === 'string' && customerEmail.trim() !== '') {
+            sessionParams.customer_email = customerEmail;
+        }
+
+        const session = await stripe.checkout.sessions.create(sessionParams);
 
         return NextResponse.json({ clientSecret: session.client_secret });
     } catch (error: any) {
