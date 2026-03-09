@@ -67,6 +67,9 @@ export async function generateContractPDF(data: ContractData) {
         </div>
         
         <div style="position: relative; z-index: 10;">
+            <div style="text-align: center; margin-bottom: 15px;">
+                <img src="/images/logo-lawslane-transparent-color.png" style="height: 60px; display: block; margin: 0 auto;" />
+            </div>
             <h1 class="title" style="text-align: center; font-size: 24px; font-weight: bold; color: #0B3979; margin-bottom: 5px;">สัญญาจ้าง</h1>
         <p class="subtitle" style="text-align: center; font-size: 16px; color: #666; margin-bottom: 20px;">(ฉบับย่อ)</p>
         
