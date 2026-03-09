@@ -451,7 +451,7 @@ export default function ContractSigningPage() {
                                         <div className="flex items-center pb-4">
                                             <span className="mr-2">วันที่</span>
                                             <span className="border-b border-dotted border-slate-900 px-4 inline-block min-w-[200px] text-center font-medium">
-                                                {formatDate(contract.createdAt).split(' ')[0]}
+                                                {formatDate(contract.createdAt).split(' ').slice(0, 3).join(' ')}
                                             </span>
                                         </div>
                                     </div>

@@ -16,6 +16,7 @@ interface ContractData {
     deadline: string;
     paymentTerms: string;
     attachments?: { name: string; url: string; type: string; }[];
+    createdAt?: any;
 }
 
 // Format Thai date
@@ -70,7 +71,7 @@ export async function generateContractPDF(data: ContractData) {
             <h1 class="title" style="text-align: center; font-size: 24px; font-weight: bold; color: #0B3979; margin-bottom: 5px;">สัญญาจ้าง</h1>
         <p class="subtitle" style="text-align: center; font-size: 16px; color: #666; margin-bottom: 20px;">(ฉบับย่อ)</p>
         
-        <p class="date" style="text-align: right; margin-bottom: 15px; font-size: 14px;">วันที่: ${formatThaiDate(new Date())}</p>
+        <p class="date" style="text-align: right; margin-bottom: 15px; font-size: 14px;">วันที่: ${data.createdAt ? formatThaiDate(data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt)) : formatThaiDate(new Date())}</p>
         
         <div class="section" style="margin-bottom: 15px;">
             <p>สัญญาฉบับนี้ทำขึ้นระหว่าง</p>
