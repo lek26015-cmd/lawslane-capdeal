@@ -34,7 +34,9 @@ export default function ContractSigningPage() {
 
     // Auth & Subscription
     const { user } = useUser();
-    const { isActive, isLoading: isSubLoading } = useSubscription();
+    const { isActive, isLoading: isSubLoading, planId } = useSubscription();
+
+    const hideWatermark = planId && planId !== 'free';
 
     const [contract, setContract] = useState<ContractData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -183,7 +185,10 @@ export default function ContractSigningPage() {
         if (!contract) return;
         setIsGeneratingPDF(true);
         try {
-            await generateContractPDF(contract as any);
+            await generateContractPDF({
+                ...contract,
+                hideWatermark
+            } as any);
         } catch (error) {
             console.error('PDF generation failed:', error);
         } finally {
@@ -446,9 +451,11 @@ export default function ContractSigningPage() {
 
                                 <CardContent className="p-10 md:p-16 space-y-8 font-serif leading-[1.8] text-slate-800 text-sm md:text-base relative z-20">
                                     {/* Watermark in Web UI */}
-                                    <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none z-0">
-                                        <img src="/images/logo-lawslane-transparent-color.png" alt="Lawslane Watermark" className="w-[80%] max-w-[400px]" />
-                                    </div>
+                                    {!hideWatermark && (
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none z-0">
+                                            <img src="/images/logo-lawslane-transparent-color.png" alt="Lawslane Watermark" className="w-[80%] max-w-[400px]" />
+                                        </div>
+                                    )}
 
                                     <div className="text-center space-y-4 mb-8 relative z-10">
                                         <h2 className="text-3xl font-bold tracking-wide text-slate-900 mb-1">สัญญาจ้าง</h2>
@@ -769,9 +776,11 @@ export default function ContractSigningPage() {
                     <div className="flex justify-center p-0 md:p-8">
                         <div className="bg-white shadow-2xl md:rounded-sm w-full max-w-[210mm] relative overflow-hidden p-6 md:p-[20mm] font-serif leading-[1.6] min-h-screen md:min-h-0 md:aspect-[1/1.414]">
                             {/* Watermark in Full Preview */}
-                            <div className="absolute inset-0 flex items-center justify-center opacity-[0.04] pointer-events-none z-0">
-                                <img src="/images/logo-lawslane-transparent-color.png" alt="Lawslane Watermark" className="w-[70%]" />
-                            </div>
+                            {!hideWatermark && (
+                                <div className="absolute inset-0 flex items-center justify-center opacity-[0.04] pointer-events-none z-0">
+                                    <img src="/images/logo-lawslane-transparent-color.png" alt="Lawslane Watermark" className="w-[70%]" />
+                                </div>
+                            )}
 
                             <div className="relative z-10 space-y-8 text-slate-800 text-[14px]">
                                 <div className="text-center space-y-2 mb-6">

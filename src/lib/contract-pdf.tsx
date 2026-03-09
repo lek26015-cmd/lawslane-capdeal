@@ -17,6 +17,7 @@ interface ContractData {
     paymentTerms: string;
     attachments?: { name: string; url: string; type: string; }[];
     createdAt?: any;
+    hideWatermark?: boolean;
 }
 
 // Format Thai date
@@ -63,9 +64,11 @@ export async function generateContractPDF(data: ContractData) {
     const htmlContent = `
     <div style="font-family: 'Sarabun', sans-serif; font-size: 14px; line-height: 1.6; color: #333; padding: 40px 50px; width: 794px; background: white; position: relative; overflow: hidden;">
         <!-- Watermark -->
+        ${!data.hideWatermark ? `
         <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 0; pointer-events: none; opacity: 0.04;">
             <img src="/images/logo-lawslane-transparent-color.png" style="width: 350px;" />
         </div>
+        ` : ''}
         
         <div style="position: relative; z-index: 10;">
             <h1 class="title" style="text-align: center; font-size: 24px; font-weight: bold; color: #0B3979; margin-bottom: 5px;">สัญญาจ้าง</h1>
