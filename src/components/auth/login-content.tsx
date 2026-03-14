@@ -130,7 +130,14 @@ function LoginPageContent() {
     });
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
-        if (!auth || !firestore) return;
+        if (!auth || !firestore) {
+            toast({
+                variant: 'destructive',
+                title: 'ระบบไม่พร้อมใช้งาน',
+                description: 'ไม่สามารถเชื่อมต่อกับ Firebase ได้ กรุณาตรวจสอบการตั้งค่า Environment Variables',
+            });
+            return;
+        }
         setIsLoading(true);
         try {
             if (!turnstileToken) {
@@ -388,6 +395,8 @@ function LoginPageContent() {
                     } else {
                         router.push(target);
                     }
+                } else {
+                    throw new Error('Firebase Auth ไม่พร้อมใช้งาน (Client-side)');
                 }
             } else {
                 // No LIFF ID configured
