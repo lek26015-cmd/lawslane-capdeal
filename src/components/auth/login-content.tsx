@@ -156,53 +156,20 @@ function LoginPageContent() {
             const sessionRes = await fetch('/api/auth/session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken }),
+                body: JSON.stringify({ idToken, redirect: redirectUrl }),
             });
 
             if (!sessionRes.ok) {
-                console.error("Session sync failed:", await sessionRes.text());
+                const errorData = await sessionRes.json().catch(() => ({ message: 'Session creation failed' }));
+                throw new Error(errorData.message || 'ไม่สามารถสร้างเซสชันได้');
             }
 
-            const userDocRef = doc(firestore, 'users', user.uid);
-            const userDoc = await getDoc(userDocRef);
-            let role = 'customer';
+            const { suggestedRedirect } = await sessionRes.json();
 
-            if (userDoc.exists()) {
-                role = userDoc.data().role;
+            if (suggestedRedirect.startsWith('http')) {
+                window.location.href = suggestedRedirect;
             } else {
-                await setDoc(userDocRef, {
-                    uid: user.uid,
-                    name: user.displayName || user.email?.split('@')[0] || 'User',
-                    email: user.email,
-                    role: 'customer',
-                    createdAt: serverTimestamp(),
-                });
-            }
-
-            if (role === 'lawyer') {
-                if (!user.emailVerified) {
-                    toast({
-                        variant: 'destructive',
-                        title: 'กรุณายืนยันอีเมล',
-                        description: 'ระบบได้ส่งลิงก์ยืนยันไปที่อีเมลของคุณแล้ว กรุณาตรวจสอบและยืนยันก่อนเข้าใช้งาน',
-                    });
-                    await signOut(auth);
-                    return;
-                }
-
-                const target = redirectUrl || '/lawyer-dashboard';
-                if (target.startsWith('http')) {
-                    window.location.href = target;
-                } else {
-                    router.push(target);
-                }
-            } else {
-                const target = redirectUrl || '/dashboard';
-                if (target.startsWith('http')) {
-                    window.location.href = target;
-                } else {
-                    router.push(target);
-                }
+                router.push(suggestedRedirect);
             }
         } catch (error: any) {
             console.error(error);
@@ -243,47 +210,25 @@ function LoginPageContent() {
             const sessionRes = await fetch('/api/auth/session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken }),
+                body: JSON.stringify({ idToken, redirect: redirectUrl }),
             });
 
             if (!sessionRes.ok) {
-                console.error("Google session sync failed:", await sessionRes.text());
+                const errorData = await sessionRes.json().catch(() => ({ message: 'Google session sync failed' }));
+                throw new Error(errorData.message || 'ไม่สามารถซิงค์เซสชัน Google ได้');
             }
 
-            const userRef = doc(firestore, 'users', user.uid);
-            const userSnap = await getDoc(userRef);
-            let role = 'customer';
-
-            if (!userSnap.exists()) {
-                await setDoc(userRef, {
-                    uid: user.uid,
-                    name: user.displayName,
-                    email: user.email,
-                    role: 'customer',
-                });
-            } else {
-                role = userSnap.data().role;
-            }
+            const { suggestedRedirect } = await sessionRes.json();
 
             toast({
                 title: 'เข้าสู่ระบบด้วย Google สำเร็จ',
                 description: 'กำลังนำคุณไปยังแดชบอร์ด...',
             });
 
-            if (role === 'lawyer') {
-                const target = redirectUrl || '/lawyer-dashboard';
-                if (target.startsWith('http')) {
-                    window.location.href = target;
-                } else {
-                    router.push(target);
-                }
+            if (suggestedRedirect.startsWith('http')) {
+                window.location.href = suggestedRedirect;
             } else {
-                const target = redirectUrl || '/dashboard';
-                if (target.startsWith('http')) {
-                    window.location.href = target;
-                } else {
-                    router.push(target);
-                }
+                router.push(suggestedRedirect);
             }
 
         } catch (error: any) {
@@ -372,28 +317,29 @@ function LoginPageContent() {
                         const sessionRes = await fetch('/api/auth/session', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ idToken: firebaseIdToken }),
+                            body: JSON.stringify({ idToken: firebaseIdToken, redirect: redirectUrl }),
                         });
                         
                         if (!sessionRes.ok) {
-                            console.error("Session creation failed", await sessionRes.text());
-                            throw new Error('การสร้างเซสชันล้มเหลว');
+                            const errorData = await sessionRes.json().catch(() => ({ message: 'Session creation failed' }));
+                            throw new Error(errorData.message || 'การสร้างเซสชันล้มเหลว');
+                        }
+
+                        const { suggestedRedirect } = await sessionRes.json();
+
+                        toast({
+                            title: 'เข้าสู่ระบบด้วย LINE สำเร็จ',
+                            description: 'กำลังนำคุณไปยังแดชบอร์ด...',
+                        });
+
+                        if (suggestedRedirect.startsWith('http')) {
+                            window.location.href = suggestedRedirect;
+                        } else {
+                            router.push(suggestedRedirect);
                         }
                     } catch (sessionErr: any) {
                         console.error("Session creation error:", sessionErr);
                         throw new Error(`ข้อผิดพลาดทางฝั่งเซิร์ฟเวอร์: ${sessionErr.message}`);
-                    }
-
-                    toast({
-                        title: 'เข้าสู่ระบบด้วย LINE สำเร็จ',
-                        description: 'กำลังนำคุณไปยังแดชบอร์ด...',
-                    });
-
-                    const target = redirectUrl || '/dashboard';
-                    if (target.startsWith('http')) {
-                        window.location.href = target;
-                    } else {
-                        router.push(target);
                     }
                 } else {
                     throw new Error('Firebase Auth ไม่พร้อมใช้งาน (Client-side)');
