@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useUser } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Search, Filter, MoreVertical, Eye } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-
+import { cn } from '@/lib/utils';
 import { Link } from '@/navigation';
 
 interface Contract {
@@ -21,14 +22,21 @@ interface Contract {
 }
 
 export default function AdminContractsPage() {
+    const { user: currentUser } = useUser();
     const [contracts, setContracts] = useState<Contract[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [search, setSearch] = useState('');
 
     useEffect(() => {
         async function fetchContracts() {
+            if (!currentUser) return;
             try {
-                const res = await fetch('/api/admin/contracts');
+                const token = await currentUser.getIdToken();
+                const res = await fetch('/api/admin/contracts', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
                 if (res.ok) {
                     const data = await res.json();
                     setContracts(data.contracts || []);
@@ -40,7 +48,7 @@ export default function AdminContractsPage() {
             }
         }
         fetchContracts();
-    }, []);
+    }, [currentUser]);
 
     const filteredContracts = contracts.filter(c =>
         c.title?.toLowerCase().includes(search.toLowerCase()) ||
@@ -154,6 +162,4 @@ export default function AdminContractsPage() {
     );
 }
 
-function cn(...classes: any[]) {
-    return classes.filter(Boolean).join(' ');
 }

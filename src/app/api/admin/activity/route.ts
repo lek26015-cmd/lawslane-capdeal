@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server';
-import { initAdmin } from '@/lib/firebase-admin';
+import { verifyAdmin } from '@/lib/admin-auth';
 
 export async function GET() {
     try {
-        const adminApp = await initAdmin();
-        if (!adminApp) {
-            return NextResponse.json({ error: 'Failed to initialize admin' }, { status: 500 });
-        }
+        const { adminApp, error, status } = await verifyAdmin();
+        if (error) return NextResponse.json({ error }, { status });
 
-        const db = adminApp.firestore();
+        const db = adminApp!.firestore();
 
         // Fetch 10 most recent users, contracts, and payments
         const [usersSnap, contractsSnap, paymentsSnap] = await Promise.all([

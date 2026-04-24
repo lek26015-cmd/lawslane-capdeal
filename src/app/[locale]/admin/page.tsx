@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useUser } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Users, FileText, DollarSign, TrendingUp, Loader2, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Stats {
     totalUsers: number;
@@ -12,20 +14,27 @@ interface Stats {
 }
 
 export default function AdminDashboardPage() {
+    const { user: currentUser } = useUser();
     const [stats, setStats] = useState<any>(null);
     const [activities, setActivities] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         async function fetchData() {
+            if (!currentUser) return;
             try {
+                const token = await currentUser.getIdToken();
                 const [statsRes, activityRes] = await Promise.all([
-                    fetch('/api/admin/stats'),
-                    fetch('/api/admin/activity')
+                    fetch('/api/admin/stats', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    }),
+                    fetch('/api/admin/activity', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    })
                 ]);
 
                 if (statsRes.ok) {
-                    const statsData = await statsRes.ok ? await statsRes.json() : null;
+                    const statsData = await statsRes.json();
                     setStats(statsData);
                 }
 
@@ -40,7 +49,7 @@ export default function AdminDashboardPage() {
             }
         }
         fetchData();
-    }, []);
+    }, [currentUser]);
 
     if (isLoading) {
         return (
@@ -186,6 +195,4 @@ function formatTimeAgo(dateStr: string) {
 }
 
 // Helper function for class names
-function cn(...classes: any[]) {
-    return classes.filter(Boolean).join(' ');
 }

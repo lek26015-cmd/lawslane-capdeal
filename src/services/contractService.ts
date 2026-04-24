@@ -49,6 +49,10 @@ export interface ContractData {
     status: 'draft' | 'pending' | 'signed' | 'completed' | 'canceled';
     createdAt: Timestamp;
     updatedAt: Timestamp;
+
+    // Sharing & Security
+    isPinProtected?: boolean;
+    sharePin?: string;
 }
 
 const COLLECTION_NAME = 'contracts';
@@ -196,5 +200,22 @@ export const contractService = {
             const timeB = b.createdAt?.toMillis?.() || 0;
             return timeB - timeA;
         });
+    },
+
+    // Generate share link and update protection settings
+    async generateShareLink(id: string, isPinProtected: boolean, sharePin?: string) {
+        const { firestore } = initializeFirebase();
+        if (!firestore) throw new Error('Firestore not initialized');
+
+        const docRef = doc(firestore, COLLECTION_NAME, id);
+        const now = serverTimestamp();
+
+        await updateDoc(docRef, {
+            isPinProtected,
+            sharePin: sharePin || null,
+            updatedAt: now
+        });
+
+        return `${window.location.origin}/shared/contract/${id}`;
     }
 };

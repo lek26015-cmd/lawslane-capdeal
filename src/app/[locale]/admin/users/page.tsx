@@ -1,13 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useUser } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, Filter, MoreVertical, User, ShieldCheck } from 'lucide-react';
+import { Loader2, Search, Filter, MoreVertical, User, ShieldCheck, UserCog, Trash2, Mail } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from 'sonner';
 
 interface UserProfile {
     uid: string;
@@ -20,26 +31,87 @@ interface UserProfile {
 }
 
 export default function AdminUsersPage() {
+    const { user: currentUser } = useUser();
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [search, setSearch] = useState('');
 
-    useEffect(() => {
-        async function fetchUsers() {
-            try {
-                const res = await fetch('/api/admin/users');
-                if (res.ok) {
-                    const data = await res.json();
-                    setUsers(data.users || []);
+    const fetchUsers = async () => {
+        if (!currentUser) return;
+        try {
+            const token = await currentUser.getIdToken();
+            const res = await fetch('/api/admin/users', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
                 }
-            } catch (error) {
-                console.error('Failed to fetch users:', error);
-            } finally {
-                setIsLoading(false);
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setUsers(data.users || []);
             }
+        } catch (error) {
+            console.error('Failed to fetch users:', error);
+            toast.error('Failed to load users');
+        } finally {
+            setIsLoading(false);
         }
+    };
+
+    useEffect(() => {
         fetchUsers();
-    }, []);
+    }, [currentUser]);
+
+    const handleRoleChange = async (uid: string, newRole: string) => {
+        if (!currentUser) return;
+        try {
+            const token = await currentUser.getIdToken();
+            const res = await fetch('/api/admin/users', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ uid, role: newRole })
+            });
+
+            if (res.ok) {
+                toast.success(`Role updated to ${newRole}`);
+                fetchUsers(); // Refresh list
+            } else {
+                const data = await res.json();
+                toast.error(data.error || 'Failed to update role');
+            }
+        } catch (error) {
+            console.error('Failed to update role:', error);
+            toast.error('An error occurred while updating role');
+        }
+    };
+
+    const handleDeleteUser = async (uid: string) => {
+        if (!currentUser) return;
+        if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+
+        try {
+            const token = await currentUser.getIdToken();
+            const res = await fetch(`/api/admin/users?uid=${uid}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (res.ok) {
+                toast.success('User deleted successfully');
+                fetchUsers(); // Refresh list
+            } else {
+                const data = await res.json();
+                toast.error(data.error || 'Failed to delete user');
+            }
+        } catch (error) {
+            console.error('Failed to delete user:', error);
+            toast.error('An error occurred while deleting user');
+        }
+    };
 
     const filteredUsers = users.filter(u =>
         u.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -128,9 +200,37 @@ export default function AdminUsersPage() {
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="py-5 text-right pr-6">
-                                            <Button size="icon" variant="ghost" className="rounded-full">
-                                                <MoreVertical className="w-4 h-4 text-slate-400" />
-                                            </Button>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button size="icon" variant="ghost" className="rounded-full">
+                                                        <MoreVertical className="w-4 h-4 text-slate-400" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                                                    <DropdownMenuLabel>User Actions</DropdownMenuLabel>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem onClick={() => handleRoleChange(user.uid, 'admin')}>
+                                                        <ShieldCheck className="w-4 h-4 mr-2 text-red-600" />
+                                                        Make Admin
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => handleRoleChange(user.uid, 'lawyer')}>
+                                                        <UserCog className="w-4 h-4 mr-2 text-blue-600" />
+                                                        Make Lawyer
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => handleRoleChange(user.uid, 'user')}>
+                                                        <User className="w-4 h-4 mr-2 text-slate-600" />
+                                                        Make Regular User
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem 
+                                                        className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                                                        onClick={() => handleDeleteUser(user.uid)}
+                                                    >
+                                                        <Trash2 className="w-4 h-4 mr-2" />
+                                                        Delete User
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -148,6 +248,4 @@ export default function AdminUsersPage() {
     );
 }
 
-function cn(...classes: any[]) {
-    return classes.filter(Boolean).join(' ');
 }

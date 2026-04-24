@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server';
-import { initAdmin } from '@/lib/firebase-admin';
+import { verifyAdmin } from '@/lib/admin-auth';
 
 export async function GET() {
     try {
-        const adminApp = await initAdmin();
-        if (!adminApp) {
-            return NextResponse.json({ error: 'Failed to initialize admin' }, { status: 500 });
-        }
+        const { adminApp, error, status } = await verifyAdmin();
+        if (error) return NextResponse.json({ error }, { status });
 
-        const db = adminApp.firestore();
+        const db = adminApp!.firestore();
         const now = new Date();
         const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);

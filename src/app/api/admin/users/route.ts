@@ -1,38 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { headers } from 'next/headers';
-import { initAdmin } from '@/lib/firebase-admin';
+import { verifyAdmin } from '@/lib/admin-auth';
 
 export async function GET(req: NextRequest) {
     try {
-        const headersList = await headers();
-        const authHeader = headersList.get('Authorization');
+        const { adminApp, error, status } = await verifyAdmin();
+        if (error) return NextResponse.json({ error }, { status });
 
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return NextResponse.json({ error: 'Unauthorized: Missing token' }, { status: 401 });
-        }
-
-        const token = authHeader.split('Bearer ')[1];
-
-        const adminApp = await initAdmin();
-        if (!adminApp) {
-            return NextResponse.json({ error: 'Failed to initialize admin' }, { status: 500 });
-        }
-
-        // Verify the ID token
-        let decodedToken;
-        try {
-            decodedToken = await adminApp.auth().verifyIdToken(token);
-        } catch (error) {
-            return NextResponse.json({ error: 'Unauthorized: Invalid token' }, { status: 401 });
-        }
-
-        // Check for admin role (email or UID)
-        const isAdmin = decodedToken.email === 'lek.26015@gmail.com' || decodedToken.role === 'admin';
-        if (!isAdmin) {
-            return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
-        }
-
-        const db = adminApp.firestore();
+        const db = adminApp!.firestore();
         const usersSnap = await db.collection('users')
             .limit(100)
             .get();
@@ -49,6 +23,59 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ users });
     } catch (error: any) {
         console.error('ADMIN_USERS_ERROR', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+export async function PATCH(req: NextRequest) {
+    try {
+        const { adminApp, error, status } = await verifyAdmin();
+        if (error) return NextResponse.json({ error }, { status });
+
+        const { uid, role } = await req.json();
+        if (!uid || !role) {
+            return NextResponse.json({ error: 'Missing uid or role' }, { status: 400 });
+        }
+
+        const db = adminApp!.firestore();
+        await db.collection('users').doc(uid).update({
+            role,
+            updatedAt: new Date()
+        });
+
+        // Also update custom claims for role
+        await adminApp!.auth().setCustomUserClaims(uid, { role });
+
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        console.error('ADMIN_USERS_PATCH_ERROR', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+export async function DELETE(req: NextRequest) {
+    try {
+        const { adminApp, error, status } = await verifyAdmin();
+        if (error) return NextResponse.json({ error }, { status });
+
+        const { searchParams } = new URL(req.url);
+        const uid = searchParams.get('uid');
+
+        if (!uid) {
+            return NextResponse.json({ error: 'Missing uid' }, { status: 400 });
+        }
+
+        const db = adminApp!.firestore();
+        
+        // Delete from Firestore
+        await db.collection('users').doc(uid).delete();
+        
+        // Delete from Auth
+        await adminApp!.auth().deleteUser(uid);
+
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        console.error('ADMIN_USERS_DELETE_ERROR', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

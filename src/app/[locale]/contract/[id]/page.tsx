@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
     Dialog,
     DialogContent,
@@ -67,6 +68,13 @@ export default function ContractSigningPage() {
     const [showConfirmSign, setShowConfirmSign] = useState(false);
     const [pendingSignature, setPendingSignature] = useState<string | null>(null);
     const [showESignInfo, setShowESignInfo] = useState(false);
+    
+    // Share Dialog states
+    const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+    const [shareIsPinProtected, setShareIsPinProtected] = useState(true);
+    const [sharePinValue, setSharePinValue] = useState('');
+    const [shareLink, setShareLink] = useState('');
+    const [isGeneratingShare, setIsGeneratingShare] = useState(false);
 
     useEffect(() => {
         if (!id) return;
@@ -79,13 +87,40 @@ export default function ContractSigningPage() {
         return () => unsubscribe();
     }, [id]);
 
-    const handleShare = async () => {
+    const handleShare = () => {
+        // Initialize share settings from current contract if they exist
+        setShareIsPinProtected(contract?.isPinProtected ?? true);
+        setSharePinValue(contract?.sharePin || '');
+        setShareLink('');
+        setIsShareDialogOpen(true);
+    };
+
+    const handleCreateShareLink = async () => {
+        if (!contract) return;
+        
+        if (shareIsPinProtected && (sharePinValue.length !== 4 || !/^\d+$/.test(sharePinValue))) {
+            alert('กรุณาระบุ PIN เป็นตัวเลข 4 หลัก');
+            return;
+        }
+
+        setIsGeneratingShare(true);
         try {
-            await navigator.clipboard.writeText(window.location.href);
+            const url = await contractService.generateShareLink(
+                contract.id, 
+                shareIsPinProtected, 
+                shareIsPinProtected ? sharePinValue : undefined
+            );
+            setShareLink(url);
+            
+            // Auto copy to clipboard
+            await navigator.clipboard.writeText(url);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
-        } catch (err) {
-            console.error('Failed to copy link', err);
+        } catch (error) {
+            console.error('Failed to generate share link:', error);
+            alert('ไม่สามารถสร้างลิงก์แชร์ได้');
+        } finally {
+            setIsGeneratingShare(false);
         }
     };
 
@@ -1183,6 +1218,92 @@ export default function ContractSigningPage() {
                         <Button onClick={() => setShowESignInfo(false)} className="bg-slate-900 text-white rounded-xl px-6">
                             เข้าใจแล้ว
                         </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+            {/* Share Dialog */}
+            <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+                <DialogContent className="sm:max-w-md bg-white border-none shadow-2xl rounded-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                            <Share2 className="w-5 h-5 text-blue-600" />
+                            แชร์สัญญาให้คู่สัญญา
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-500">
+                            ส่งลิงก์นี้ให้ผู้ว่าจ้างหรือผู้รับจ้างเพื่อดำเนินการเซ็นชื่อ
+                        </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="space-y-6 py-4">
+                        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+                            <div className="space-y-0.5">
+                                <Label htmlFor="pin-toggle" className="text-base font-semibold text-slate-800">ตั้งรหัสผ่าน PIN เพื่อความปลอดภัย</Label>
+                                <p className="text-xs text-slate-500">จำกัดการเข้าถึงเฉพาะผู้ที่มีรหัส PIN เท่านั้น</p>
+                            </div>
+                            <Switch 
+                                id="pin-toggle"
+                                checked={shareIsPinProtected} 
+                                onCheckedChange={setShareIsPinProtected}
+                            />
+                        </div>
+
+                        {shareIsPinProtected ? (
+                            <div className="space-y-2 px-1">
+                                <Label className="text-sm font-medium text-slate-700">ระบุ PIN 4 หลัก</Label>
+                                <Input 
+                                    type="text" 
+                                    maxLength={4} 
+                                    placeholder="เช่น 1234"
+                                    value={sharePinValue}
+                                    onChange={(e) => setSharePinValue(e.target.value.replace(/\D/g, ''))}
+                                    className="text-center text-2xl tracking-[1em] font-bold h-14 rounded-xl border-slate-200 focus:border-blue-500 focus:ring-blue-500"
+                                />
+                            </div>
+                        ) : (
+                            <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex gap-3 items-start animate-in fade-in slide-in-from-top-2">
+                                <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                                <p className="text-sm font-bold text-red-600 leading-relaxed">
+                                    อันตรายหากมีผู้อื่นเข้าถึงสัญญาก่อนและเซ็นเอกสารแทนลูกค้า
+                                </p>
+                            </div>
+                        )}
+
+                        {!shareLink ? (
+                            <Button 
+                                onClick={handleCreateShareLink} 
+                                disabled={isGeneratingShare}
+                                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200"
+                            >
+                                {isGeneratingShare ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <LinkIcon className="w-4 h-4 mr-2" />}
+                                สร้างลิงก์และคัดลอก
+                            </Button>
+                        ) : (
+                            <div className="space-y-3">
+                                <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center gap-2 text-emerald-700 text-sm font-medium">
+                                    <CheckCircle className="w-4 h-4" />
+                                    สร้างลิงก์สำเร็จและคัดลอกแล้ว!
+                                </div>
+                                <div className="flex gap-2">
+                                    <Input 
+                                        readOnly 
+                                        value={shareLink} 
+                                        className="bg-slate-50 border-slate-200 text-slate-500 text-xs rounded-xl"
+                                    />
+                                    <Button 
+                                        variant="outline" 
+                                        size="icon"
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(shareLink);
+                                            setCopied(true);
+                                            setTimeout(() => setCopied(false), 2000);
+                                        }}
+                                        className="shrink-0 rounded-xl border-slate-200"
+                                    >
+                                        <LinkIcon className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </DialogContent>
             </Dialog>

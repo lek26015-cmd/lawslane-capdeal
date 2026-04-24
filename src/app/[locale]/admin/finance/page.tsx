@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useUser } from '@/firebase';
 import { collection, query, where, getDocs, doc, updateDoc, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -43,6 +43,7 @@ interface PendingDeal {
 }
 
 export default function AdminFinancePage() {
+    const { user: currentUser } = useUser();
     const { firestore } = useFirebase();
     const { toast } = useToast();
     const [data, setData] = useState<{ transactions: Transaction[], chartData: ChartItem[], summary: any } | null>(null);
@@ -59,8 +60,14 @@ export default function AdminFinancePage() {
 
     useEffect(() => {
         async function fetchFinance() {
+            if (!currentUser) return;
             try {
-                const res = await fetch('/api/admin/finance');
+                const token = await currentUser.getIdToken();
+                const res = await fetch('/api/admin/finance', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
                 if (res.ok) {
                     const json = await res.json();
                     setData(json);
@@ -72,7 +79,7 @@ export default function AdminFinancePage() {
             }
         }
         fetchFinance();
-    }, []);
+    }, [currentUser]);
 
     useEffect(() => {
         if (activeTab === 'verification') {

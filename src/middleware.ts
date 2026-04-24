@@ -19,7 +19,7 @@ export default async function middleware(request: NextRequest) {
             // Check for both session and session_hint for extra robustness in dev
             // session_hint from Client helps skip redirects during auto-sync
             const hasSession = request.cookies.has('session') ||
-                (process.env.NODE_ENV !== 'production' && request.cookies.has('session_hint'));
+                (process.env.NODE_ENV !== 'production' && request.cookies.has('session_hint') && (hostname.includes('localhost') || hostname.includes('127.0.0.1')));
 
             const isDashboardRoute = (pathname.includes('/dashboard') || pathname.includes('/clm')) &&
                 !pathname.includes('/login') &&

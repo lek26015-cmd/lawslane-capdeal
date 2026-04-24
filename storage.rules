@@ -33,7 +33,7 @@ service firebase.storage {
 
     // Contract files — restricted to owner
     match /contracts/{contractId}/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == firestore.get(/databases/(default)/documents/contracts/$(contractId)).data.ownerId;
+      allow read, write: if request.auth != null && firestore.get(/databases/(default)/documents/contracts/$(contractId)).data.ownerId == request.auth.uid;
     }
 
     // User uploads (profile pics etc.)
