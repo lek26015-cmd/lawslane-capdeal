@@ -137,11 +137,12 @@
         },
         "pricing_common": {
             "currency": "฿",
-            "period": "/เดือน",
+            "month_unit": "/เดือน",
             "per_year": "บาท/ปี",
             "monthly": "รายเดือน",
             "yearly": "รายปี",
-            "save_percent": "คุ้มกว่า! ฟรี 2 เดือน"
+            "save_percent": "คุ้มกว่า! ฟรี 2 เดือน",
+            "year_unit": "/ปี"
         }
     },
     "NotFound": {

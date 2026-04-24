@@ -137,11 +137,12 @@
         },
         "pricing_common": {
             "currency": "$",
-            "period": "/month",
+            "month_unit": "/month",
             "per_year": "USD/year",
             "monthly": "Monthly",
             "yearly": "Yearly",
-            "save_percent": "Save 20%"
+            "save_percent": "Save 20%",
+            "year_unit": "/year"
         }
     },
     "NotFound": {

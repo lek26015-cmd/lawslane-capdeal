@@ -19,8 +19,7 @@ export function PricingCards() {
     const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null);
     const [isYearly, setIsYearly] = useState(false);
 
-    const t = useTranslations('HomePage.pricing_tiers');
-    const tCommon = useTranslations('HomePage.pricing_common');
+    const t = useTranslations('HomePage');
 
     const handleSubscribe = async (planId: PlanId) => {
         setLoadingPlan(planId);
@@ -63,7 +62,7 @@ export function PricingCards() {
                             !isYearly ? "text-blue-600" : "text-slate-500"
                         )}
                     >
-                        {tCommon('monthly')}
+                        {t('pricing_common.monthly')}
                         {!isYearly && (
                             <motion.div
                                 layoutId="active-pill"
@@ -79,9 +78,9 @@ export function PricingCards() {
                             isYearly ? "text-blue-600" : "text-slate-500"
                         )}
                     >
-                        {tCommon('yearly')}
+                        {t('pricing_common.yearly')}
                         <span className="text-emerald-500 font-bold ml-1 text-[11px] uppercase tracking-tight">
-                            {tCommon('save_percent')}
+                            {t('pricing_common.save_percent')}
                         </span>
                         {isYearly && (
                             <motion.div
@@ -98,7 +97,7 @@ export function PricingCards() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 w-full">
                 {plans.map((plan) => {
                     const planId = plan.id as PlanId;
-                    const localizedFeatures = t.raw(`${planId}.features`) as string[];
+                    const localizedFeatures = t.raw(`pricing_tiers.${planId}.features`) as string[];
                     const isPro = planId === 'pro';
                     const price = isYearly ? plan.yearlyPrice : plan.price;
                     const monthlyEquivalent = isYearly ? (plan.yearlyPrice / 12) : plan.price;
@@ -115,31 +114,31 @@ export function PricingCards() {
                         >
                             {isPro && (
                                 <div className="bg-blue-600 text-white text-[10px] font-bold uppercase tracking-[0.1em] text-center py-1 absolute top-0 right-0 px-4 rounded-bl-xl z-20">
-                                    {t(`${planId}.popular_tag`) || 'ยอดนิยม'}
+                                    {t(`pricing_tiers.${planId}.popular_tag`) || 'ยอดนิยม'}
                                 </div>
                             )}
 
                             <CardHeader className="pt-10 pb-6 px-8">
                                 <CardTitle className="text-2xl font-extrabold text-[#0F172A]">
-                                    {t(`${planId}.name`) || plan.name}
+                                    {t(`pricing_tiers.${planId}.name`) || plan.name}
                                 </CardTitle>
                                 <CardDescription className="text-sm mt-3 text-slate-400 font-medium leading-relaxed min-h-[40px]">
-                                    {t(`${planId}.description`)}
+                                    {t(`pricing_tiers.${planId}.description`)}
                                 </CardDescription>
 
                                 <div className="mt-6 flex flex-col gap-1">
                                     <div className="flex items-baseline">
-                                        <span className="text-3xl font-bold text-[#0F172A] mr-1">{tCommon('currency')}</span>
+                                        <span className="text-3xl font-bold text-[#0F172A] mr-1">{t('pricing_common.currency')}</span>
                                         <span className="text-5xl font-extrabold text-[#0F172A] tracking-tight">
                                             {price.toLocaleString()}
                                         </span>
                                         <span className="text-sm font-medium text-slate-400 ml-2">
-                                            {isYearly ? tCommon('yearly_period') || 'ต่อปี' : tCommon('period')}
+                                            {isYearly ? t('pricing_common.year_unit') : t('pricing_common.month_unit')}
                                         </span>
                                     </div>
                                     {isYearly && (
                                         <p className="text-xs text-emerald-600 font-medium">
-                                            (เฉลี่ยเพียง {monthlyEquivalent.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} {tCommon('currency')} {tCommon('period')})
+                                            (เฉลี่ยเพียง {monthlyEquivalent.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} {t('pricing_common.currency')} {t('pricing_common.month_unit')})
                                         </p>
                                     )}
                                 </div>
@@ -179,7 +178,7 @@ export function PricingCards() {
                                     {loadingPlan === planId ? (
                                         <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                                     ) : (
-                                        t(`${planId}.cta`) || 'เริ่มต้นใช้งาน'
+                                        t(`pricing_tiers.${planId}.cta`) || 'เริ่มต้นใช้งาน'
                                     )}
                                 </Button>
                             </CardFooter>

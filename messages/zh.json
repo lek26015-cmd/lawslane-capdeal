@@ -144,7 +144,8 @@
             "yearly": "按年",
             "save_percent": "省 20%",
             "currency": "฿",
-            "period": "/月"
+            "month_unit": "/月",
+            "year_unit": "/年"
         }
     },
     "contactSection": {
