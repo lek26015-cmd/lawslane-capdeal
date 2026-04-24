@@ -44,12 +44,17 @@ export async function getUserDashboardData(userId: string) {
         };
     });
 
+    // Fetch User Profile
+    const userDoc = await db.collection('users').doc(userId).get();
+    const profile = userDoc.exists ? userDoc.data() : null;
+
     // Return empty arrays for cases and appointments as they are lawyer-specific
     return {
         cases: [] as Case[],
         appointments: [] as UpcomingAppointment[],
         tickets,
-        contracts
+        contracts,
+        profile
     };
 }
 

@@ -195,7 +195,7 @@ export default function Header({ setUserRole, domainType = 'main' }: { setUserRo
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className={cn("flex items-center gap-2 h-11 px-4 rounded-xl", loginButtonClasses)}>
                       <Avatar className="w-8 h-8">
-                        <AvatarImage src={avatarUrl || ""} />
+                        <AvatarImage src={avatarUrl || undefined} />
                         <AvatarFallback>{user.displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <span className="hidden lg:inline">{user.displayName || user.email}</span>
@@ -279,7 +279,7 @@ export default function Header({ setUserRole, domainType = 'main' }: { setUserRo
           {user ? (
             <Link href="/account">
               <Avatar className="w-8 h-8 border border-white/20">
-                <AvatarImage src={avatarUrl || ""} />
+                <AvatarImage src={avatarUrl || undefined} />
                 <AvatarFallback>{user.displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
               </Avatar>
             </Link>

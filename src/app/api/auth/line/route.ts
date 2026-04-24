@@ -95,12 +95,27 @@ export async function POST(req: NextRequest) {
             try {
                 const existingUser = await adminAuth.getUserByEmail(email);
                 firebaseUid = existingUser.uid;
-                // Link LINE userId to existing account
+
+                const userDoc = await adminDb.collection('users').doc(firebaseUid).get();
+                const userData = userDoc.data();
+
+                // Link LINE userId to existing account and sync profile if needed
                 await adminDb.collection('users').doc(firebaseUid).set({
                     lineUserId,
                     lineDisplayName: displayName,
                     linePictureUrl: pictureUrl,
+                    // Sync to main profile if missing
+                    name: userData?.name || displayName,
+                    avatar: userData?.avatar || pictureUrl,
                 }, { merge: true });
+
+                // Also update Auth profile photo if missing
+                if (!existingUser.photoURL && pictureUrl) {
+                    await adminAuth.updateUser(firebaseUid, {
+                        photoURL: pictureUrl,
+                        displayName: existingUser.displayName || displayName
+                    });
+                }
             } catch {
                 // No existing user with that email, create new
                 const newUser = await adminAuth.createUser({
@@ -113,14 +128,16 @@ export async function POST(req: NextRequest) {
                     lineUserId,
                     lineDisplayName: displayName,
                     linePictureUrl: pictureUrl,
+                    name: displayName,
+                    avatar: pictureUrl,
                     email,
                     createdAt: new Date(),
                     provider: 'line',
+                    role: 'customer'
                 }, { merge: true });
             }
         } else {
             // No email, create user without email
-            // Use LINE userId as part of the UID for consistency
             const customUid = `line_${lineUserId}`;
             try {
                 await adminAuth.getUser(customUid);
@@ -137,8 +154,11 @@ export async function POST(req: NextRequest) {
                     lineUserId,
                     lineDisplayName: displayName,
                     linePictureUrl: pictureUrl,
+                    name: displayName,
+                    avatar: pictureUrl,
                     createdAt: new Date(),
                     provider: 'line',
+                    role: 'customer'
                 }, { merge: true });
             }
         }

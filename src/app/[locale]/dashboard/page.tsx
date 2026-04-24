@@ -26,6 +26,7 @@ export default function DashboardPage() {
 
     const [tickets, setTickets] = useState<ReportedTicket[]>([]);
     const [capDeals, setCapDeals] = useState<any[]>([]);
+    const [profile, setProfile] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     const dateLocale = locale === 'th' ? th : locale === 'zh' ? zhCN : enUS;
@@ -49,6 +50,9 @@ export default function DashboardPage() {
                     // Use contracts from the same dashboard data fetch
                     if (data.contracts) {
                         setCapDeals(data.contracts);
+                    }
+                    if (data.profile) {
+                        setProfile(data.profile);
                     }
                 } catch (error) {
                     console.error("Error fetching dashboard data:", error);
@@ -152,10 +156,10 @@ export default function DashboardPage() {
                         <Card className="rounded-3xl shadow-sm border-none">
                             <CardContent className="pt-6 flex flex-col items-center text-center">
                                 <Avatar className="w-20 h-20 mb-4">
-                                    <AvatarImage src={user.photoURL || "https://picsum.photos/seed/user-avatar/100/100"} />
-                                    <AvatarFallback>{user.displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
+                                    <AvatarImage src={profile?.avatar || user.photoURL || "https://picsum.photos/seed/user-avatar/100/100"} />
+                                    <AvatarFallback>{profile?.name?.charAt(0) || user.displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
                                 </Avatar>
-                                <p className="font-semibold text-lg">{user.displayName || user.email}</p>
+                                <p className="font-semibold text-lg">{profile?.name || user.displayName || user.email}</p>
                                 <p className="text-sm text-muted-foreground mb-4">{user.email}</p>
                                 <Link href={`/${locale}/account`} className="w-full">
                                     <Button variant="outline" className="w-full rounded-full">{t('manageAccount')}</Button>
