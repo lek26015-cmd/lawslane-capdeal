@@ -719,9 +719,7 @@ export default function AccountPage() {
           </Card>
 
           {/* Subscription Management */}
-          <div id="subscription">
-            <SubscriptionCard />
-          </div>
+          <SubscriptionCard />
 
 
           <Card className="rounded-3xl shadow-sm border-destructive">

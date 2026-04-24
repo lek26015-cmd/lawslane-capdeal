@@ -237,15 +237,6 @@ export default function Header({ setUserRole, domainType = 'main' }: { setUserRo
                       </Link>
                     </DropdownMenuItem>
 
-                    <DropdownMenuItem asChild className="rounded-lg py-2.5">
-                      <Link href="/account#subscription" className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
-                          <CreditCard className="w-4 h-4" />
-                        </div>
-                        <span>{t('billing')}</span>
-                      </Link>
-                    </DropdownMenuItem>
-
                     <DropdownMenuSeparator className="bg-slate-50" />
 
                     <DropdownMenuItem onClick={handleLogout} className="rounded-lg py-2.5 text-red-600 focus:bg-red-50 focus:text-red-700">
