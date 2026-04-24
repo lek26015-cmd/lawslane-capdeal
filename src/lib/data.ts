@@ -12,7 +12,8 @@ import {
   updateDoc,
   increment,
   getCountFromServer,
-  writeBatch
+  writeBatch,
+  Timestamp
 } from 'firebase/firestore';
 import type { LawyerProfile, ImagePlaceholder, Ad, Article, Case, UpcomingAppointment, ReportedTicket, LawyerAppointmentRequest, LawyerCase, UserProfile, LegalForm } from '@/lib/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -120,27 +121,34 @@ export async function getAdById(db: Firestore, id: string): Promise<Ad | undefin
 }
 
 // --- User Dashboard Functions ---
-export async function getDashboardData(db: Firestore, userId: string) {
-  if (!db) return { cases: [], appointments: [], tickets: [] };
+export async function getDashboardData(db: Firestore, userId: string): Promise<{ cases: Case[], appointments: UpcomingAppointment[], tickets: ReportedTicket[], contracts: any[] }> {
 
-  // 1. Fetch Cases (Chats) - Use dual query for reliability
+  if (!db) return { cases: [], appointments: [], tickets: [], contracts: [] };
+
+  // 1. Fetch Cases (Chats) - Use participants query strictly for security compliance
   const chatsRef = collection(db, 'chats');
 
-  // Query by participants array (primary method)
-  const participantsQuery = query(chatsRef, where('participants', 'array-contains', userId), limit(50));
+  // Query by participants array (strictly enforced by security rules)
+  const participantsQuery = query(
+    chatsRef, 
+    where('participants', 'array-contains', userId), 
+    limit(50)
+  );
+  
   const participantsSnapshot = await getDocs(participantsQuery);
 
-  // Query by userId field (fallback method for older/inconsistent docs)
-  const userIdQuery = query(chatsRef, where('userId', '==', userId), limit(50));
-  const userIdSnapshot = await getDocs(userIdQuery);
+  // 2. Fetch Contracts - strictly enforced by ownerId check
+  const contractsRef = collection(db, 'contracts');
+  const contractsQuery = query(
+    contractsRef,
+    where('ownerId', '==', userId),
+    limit(50)
+  );
+  const contractsSnapshot = await getDocs(contractsQuery);
 
-  // Merge results, avoiding duplicates
-  const seenIds = new Set<string>();
-  const allChatDocs = [...participantsSnapshot.docs, ...userIdSnapshot.docs].filter(doc => {
-    if (seenIds.has(doc.id)) return false;
-    seenIds.add(doc.id);
-    return true;
-  });
+  const allChatDocs = participantsSnapshot.docs;
+  const allContractDocs = contractsSnapshot.docs;
+
 
   // Extract all unique lawyer IDs to fetch them in one batch
   const lawyerIds = new Set<string>();
@@ -283,12 +291,25 @@ export async function getDashboardData(db: Firestore, userId: string) {
     } as ReportedTicket;
   });
 
+  // 4. Format Contracts
+  const formattedContracts = allContractDocs.map(d => {
+    const data = d.data();
+    return {
+      id: d.id,
+      ...data,
+      createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+      updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : new Date().toISOString(),
+    };
+  });
+
   return {
     cases,
     appointments: futureAppointments,
-    tickets
+    tickets,
+    contracts: formattedContracts
   };
 }
+
 
 // --- Lawyer Dashboard Functions ---
 
@@ -298,7 +319,12 @@ export async function getLawyerDashboardData(db: Firestore, lawyerId: string): P
   try {
     // 1. Fetch appointments and chats in parallel
     const appointmentsRef = collection(db, 'appointments');
-    const requestsQuery = query(appointmentsRef, where('lawyerId', '==', lawyerId), where('status', '==', 'pending'), limit(50));
+    const requestsQuery = query(
+      appointmentsRef, 
+      where('lawyerId', '==', lawyerId), 
+      where('status', '==', 'pending'), 
+      limit(50)
+    );
 
     const chatsRef = collection(db, 'chats');
     const casesQuery = query(chatsRef, where('participants', 'array-contains', lawyerId), limit(100));
@@ -383,7 +409,7 @@ export async function getLawyerDashboardData(db: Firestore, lawyerId: string): P
   }
 }
 
-export async function getAdminLawyerDashboardData(db: Firestore): Promise<{ newRequests: LawyerAppointmentRequest[], activeCases: LawyerCase[], completedCases: LawyerCase[] }> {
+export async function getAdminLawyerDashboardData(db: Firestore, userId: string): Promise<{ newRequests: LawyerAppointmentRequest[], activeCases: LawyerCase[], completedCases: LawyerCase[] }> {
   if (!db) return { newRequests: [], activeCases: [], completedCases: [] };
 
   let newRequests: LawyerAppointmentRequest[] = [];
@@ -392,7 +418,12 @@ export async function getAdminLawyerDashboardData(db: Firestore): Promise<{ newR
   try {
     // Fetch ALL pending appointment requests
     const appointmentsRef = collection(db, 'appointments');
-    const requestsQuery = query(appointmentsRef, where('status', '==', 'pending'));
+    const requestsQuery = query(
+      appointmentsRef, 
+      where('userId', '==', userId), 
+      where('status', '==', 'pending')
+    );
+
     const requestsSnapshot = await getDocs(requestsQuery);
     newRequests = await Promise.all(requestsSnapshot.docs.map(async d => {
       const data = d.data();
@@ -421,7 +452,12 @@ export async function getAdminLawyerDashboardData(db: Firestore): Promise<{ newR
   try {
     // Fetch ALL cases (chats)
     const chatsRef = collection(db, 'chats');
-    const casesSnapshot = await getDocs(chatsRef);
+    const casesQuery = query(
+      chatsRef, 
+      where('participants', 'array-contains', userId), 
+      limit(100)
+    );
+    const casesSnapshot = await getDocs(casesQuery);
     lawyerCases = await Promise.all(casesSnapshot.docs.map(async (d) => {
       const chatData = d.data();
       // For admin view, maybe show both lawyer and client? 
@@ -689,7 +725,7 @@ export async function getAdminStats(db: Firestore) {
   }
 }
 
-export async function getFinancialStats(db: Firestore) {
+export async function getFinancialStats(db: Firestore, userId: string) {
   if (!db) return {
     totalServiceValue: 0,
     platformRevenueThisMonth: 0,
@@ -703,10 +739,10 @@ export async function getFinancialStats(db: Firestore) {
   const monthlyRevenue: { [key: string]: number } = {};
 
   try {
-    // Fetch in parallel
+    // Fetch in parallel - Filter by current user for security compliance
     const [appointmentsSnapshot, chatsSnapshot] = await Promise.all([
-      getDocs(query(collection(db, 'appointments'), limit(500))),
-      getDocs(query(collection(db, 'chats'), limit(500)))
+      getDocs(query(collection(db, 'appointments'), where('userId', '==', userId), limit(100))),
+      getDocs(query(collection(db, 'chats'), where('participants', 'array-contains', userId), limit(100)))
     ]);
 
     appointmentsSnapshot.docs.forEach(doc => {

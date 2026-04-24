@@ -24,7 +24,23 @@ export async function getUserDashboardData(userId: string) {
             caseTitle: data.caseTitle || '',
             problemType: data.problemType || '',
             status: data.status || 'pending',
-            reportedAt: data.reportedAt instanceof admin.firestore.Timestamp ? data.reportedAt.toDate() : new Date(),
+            reportedAt: data.reportedAt instanceof admin.firestore.Timestamp ? data.reportedAt.toDate().toISOString() : new Date().toISOString(),
+        } as any; // Cast to any to handle Date vs String in type
+    });
+
+    // Fetch Contracts (Cap and Deal)
+    const contractsRef = db.collection('contracts');
+    const contractSnap = await contractsRef.where('ownerId', '==', userId).orderBy('createdAt', 'desc').limit(5).get();
+
+    const contracts = contractSnap.docs.map(d => {
+        const data = d.data();
+        // Convert all possible timestamps to strings
+        return {
+            id: d.id,
+            ...data,
+            createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+            updatedAt: data.updatedAt instanceof admin.firestore.Timestamp ? data.updatedAt.toDate().toISOString() : 
+                       (data.updatedAt ? data.updatedAt : new Date().toISOString()),
         };
     });
 
@@ -32,6 +48,8 @@ export async function getUserDashboardData(userId: string) {
     return {
         cases: [] as Case[],
         appointments: [] as UpcomingAppointment[],
-        tickets
+        tickets,
+        contracts
     };
 }
+

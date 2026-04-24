@@ -11,6 +11,13 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const { firestore } = initializeFirebase();
+  
+  if (!firestore) {
+    return {
+      title: 'Error - Lawslane',
+    };
+  }
+  
   const article = await getArticleBySlug(firestore, slug);
 
   if (!article) {
@@ -51,6 +58,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ArticlePage({ params }: Props) {
   const { slug } = await params;
   const { firestore } = initializeFirebase();
+  
+  if (!firestore) {
+    notFound();
+  }
+  
   const article = await getArticleBySlug(firestore, slug);
 
   if (!article) {

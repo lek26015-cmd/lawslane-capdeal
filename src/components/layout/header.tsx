@@ -26,7 +26,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { doc, getDoc } from 'firebase/firestore';
 import { getMainLink, getBusinessLink } from '@/lib/domain-utils';
 
-export default function Header({ setUserRole, domainType = 'main' }: { setUserRole: (role: string | null) => void; domainType?: 'main' | 'admin' | 'business' }) {
+export default function Header({ setUserRole, domainType = 'main' }: { setUserRole: (role: string | null) => void; domainType?: 'main' | 'admin' | 'business' | 'lawyer' }) {
   const t = useTranslations('Navigation');
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

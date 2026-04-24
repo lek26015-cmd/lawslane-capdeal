@@ -55,7 +55,7 @@ service cloud.firestore {
         return isSignedIn() && request.auth.uid in resource.data.participants;
       }
       
-      allow get, list: if isSignedIn(); // Broad access for now to fix dashbaord errors
+      allow get, list: if isParticipant() || isAdmin();
       allow create: if isSignedIn();
       allow update: if isParticipant() || isAdmin();
 
@@ -206,10 +206,10 @@ service cloud.firestore {
         );
       }
 
-      allow get: if true;
+      allow get: if canAccessContract();
       allow list: if canAccessContract();
       allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update: if true;
+      allow update: if canAccessContract();
       allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerId);
     }
 

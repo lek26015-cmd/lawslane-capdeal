@@ -46,25 +46,16 @@ export default function DashboardPage() {
                 try {
                     const data = await getUserDashboardData(user.uid);
                     setTickets(data.tickets);
+                    // Use contracts from the same dashboard data fetch
+                    if (data.contracts) {
+                        setCapDeals(data.contracts);
+                    }
                 } catch (error) {
                     console.error("Error fetching dashboard data:", error);
                     setTickets([]);
+                    setCapDeals([]);
                 }
 
-                // Fetch cap deals separately via API route (uses admin SDK)
-                try {
-                    const res = await fetch('/api/cap-deals', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userId: user.uid }),
-                    });
-                    if (res.ok) {
-                        const capData = await res.json();
-                        setCapDeals(capData.capDeals || []);
-                    }
-                } catch (err) {
-                    console.warn('Failed to fetch cap deals:', err);
-                }
             } else {
                 setTickets([]);
                 setCapDeals([]);
