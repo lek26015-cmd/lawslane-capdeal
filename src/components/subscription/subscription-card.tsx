@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { CreditCard, Zap, ExternalLink, Loader2, Wallet } from 'lucide-react';
+import { CreditCard, Zap, ExternalLink, Loader2, Wallet, CheckCircle2 } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useUser } from '@/firebase';
 import { Link } from '@/navigation';
+import { cn } from '@/lib/utils';
 
 export function SubscriptionCard() {
     const { user } = useUser();
@@ -90,53 +91,76 @@ export function SubscriptionCard() {
     }
 
     return (
-        <Card className="rounded-3xl shadow-sm border-none overflow-hidden">
-            <CardHeader className="bg-slate-900 text-white flex flex-row items-center justify-between pb-8">
+        <Card className="rounded-3xl shadow-sm border-none overflow-hidden bg-white">
+            <CardHeader className="bg-slate-900 text-white flex flex-row items-center justify-between pb-8 p-8">
                 <div className="flex items-center gap-4">
-                    <CreditCard className="w-6 h-6 text-amber-400" />
+                    <div className="w-12 h-12 rounded-2xl bg-amber-400/20 flex items-center justify-center">
+                        <CreditCard className="w-6 h-6 text-amber-400" />
+                    </div>
                     <div>
-                        <CardTitle className="text-xl">Subscription Plan</CardTitle>
-                        <CardDescription className="text-slate-400">Manage your current subscription and usage</CardDescription>
+                        <CardTitle className="text-xl font-headline">แพ็กเกจการใช้งาน</CardTitle>
+                        <CardDescription className="text-slate-400">จัดการการสมัครสมาชิกและตรวจสอบการใช้งาน</CardDescription>
                     </div>
                 </div>
-                <Badge variant="secondary" className="bg-amber-400 text-slate-900 font-bold px-4 py-1 rounded-full uppercase tracking-wider">
+                <Badge variant="secondary" className="bg-amber-400 text-slate-900 font-bold px-4 py-1.5 rounded-full uppercase tracking-wider shadow-lg shadow-amber-400/20">
                     {plan.name}
                 </Badge>
             </CardHeader>
-            <CardContent className="space-y-6 pt-6">
-                <div className="space-y-2">
-                    <div className="flex justify-between text-sm font-medium">
-                        <span className="text-slate-600">Monthly Usage (Deals)</span>
-                        <span className={`${isOverLimit ? 'text-red-500' : 'text-slate-900'}`}>
-                            {casesThisMonth} / {dealsLimit} {isActive ? 'deals' : 'scans'}
-                        </span>
+            <CardContent className="space-y-8 pt-8 p-8">
+                <div className="space-y-4">
+                    <div className="flex justify-between items-end">
+                        <div className="space-y-1">
+                            <span className="text-sm font-semibold text-slate-500 uppercase tracking-wider">โควตาการใช้งานรายเดือน</span>
+                            <p className="text-2xl font-bold text-slate-900">
+                                {casesThisMonth} <span className="text-slate-400 text-lg font-medium">/ {dealsLimit} สัญญา</span>
+                            </p>
+                        </div>
+                        <div className={cn(
+                            "px-3 py-1 rounded-full text-xs font-bold",
+                            isOverLimit ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"
+                        )}>
+                            {isOverLimit ? 'เกินขีดจำกัด' : 'ปกติ'}
+                        </div>
                     </div>
-                    <Progress value={usagePercentage} className={`h-2 ${isOverLimit ? 'bg-red-100' : 'bg-slate-100'}`} />
-                    <p className="text-xs text-muted-foreground pt-1">
+                    <Progress value={usagePercentage} className={cn("h-3 rounded-full", isOverLimit ? "bg-red-100" : "bg-slate-100")} />
+                    <p className="text-sm text-slate-500 flex items-center gap-2">
                         {isOverLimit
-                            ? "You've reached your monthly limit. Upgrade to continue."
-                            : `${dealsLimit - casesThisMonth} deals remaining in your current period.`}
+                            ? "คุณใช้งานเกินขีดจำกัดแล้ว กรุณาอัปเกรดเพื่อใช้งานต่อ"
+                            : `เหลือสิทธิ์การวิเคราะห์อีก ${dealsLimit - casesThisMonth} สัญญาในรอบเดือนนี้`}
                     </p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                    {isActive ? (
+                <div className="flex flex-col gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <Button
                             onClick={handleManageSubscription}
-                            disabled={isPortalLoading}
+                            disabled={isPortalLoading || !profile?.subscription?.customerId}
                             variant="outline"
-                            className="flex-1 rounded-full border-slate-200 hover:bg-slate-50"
+                            className="h-14 rounded-2xl border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all font-semibold"
                         >
-                            {isPortalLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ExternalLink className="mr-2 h-4 w-4" />}
-                            Billing Portal
+                            {isPortalLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Wallet className="mr-2 h-5 w-5 text-slate-400" />}
+                            จัดการการชำระเงิน
                         </Button>
-                    ) : (
-                        <Button asChild className="flex-1 rounded-full bg-slate-900 text-white hover:bg-slate-800">
-                            <Link href="/pricing" className="flex items-center justify-center">
-                                <Zap className="mr-2 h-4 w-4 fill-amber-400 text-amber-400" />
-                                Upgrade Plan
-                            </Link>
-                        </Button>
+
+                        {!isActive ? (
+                            <Button asChild className="h-14 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all font-bold">
+                                <Link href="/pricing" className="flex items-center justify-center">
+                                    <Zap className="mr-2 h-5 w-5 fill-amber-400 text-amber-400" />
+                                    อัปเกรดแพ็กเกจ
+                                </Link>
+                            </Button>
+                        ) : (
+                            <Button variant="ghost" className="h-14 rounded-2xl text-slate-500 font-medium" disabled>
+                                <CheckCircle2 className="mr-2 h-5 w-5 text-emerald-500" />
+                                เปิดใช้งานแล้ว
+                            </Button>
+                        )}
+                    </div>
+                    
+                    {!profile?.subscription?.customerId && (
+                        <p className="text-[11px] text-center text-slate-400 mt-2">
+                            คุณยังไม่มีข้อมูลการชำระเงิน กรุณาสมัครแพ็กเกจเพื่อเริ่มจัดการการชำระเงิน
+                        </p>
                     )}
                 </div>
             </CardContent>
