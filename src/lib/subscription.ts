@@ -46,8 +46,8 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
         limits: {
             dealsPerMonth: 30,
         },
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_LITE || '',
-        stripeYearlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_LITE_YEARLY || '',
+        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_LITE || 'price_1T8gL1AJP9OMQXK8ZE5YmgOx',
+        stripeYearlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_LITE_YEARLY || 'price_1T8gL1AJP9OMQXK8ZE5YmgOx',
     },
     pro: {
         id: 'pro',
@@ -65,8 +65,8 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
         limits: {
             dealsPerMonth: 100,
         },
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO || '',
-        stripeYearlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO_YEARLY || '',
+        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO || 'price_1T8gNUAJP9OMQXK8QpcIjmUa',
+        stripeYearlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO_YEARLY || 'price_1T8gNUAJP9OMQXK8QpcIjmUa',
     },
     scale: {
         id: 'scale',
@@ -84,8 +84,8 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
         limits: {
             dealsPerMonth: 1000,
         },
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_SCALE || '',
-        stripeYearlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_SCALE_YEARLY || '',
+        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_SCALE || 'price_1T8gO9AJP9OMQXK8ae1bZj9Y',
+        stripeYearlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_SCALE_YEARLY || 'price_1T8gO9AJP9OMQXK8ae1bZj9Y',
     },
 };
 
