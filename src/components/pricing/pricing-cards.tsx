@@ -101,7 +101,7 @@ export function PricingCards() {
                     const localizedFeatures = t.raw(`${planId}.features`) as string[];
                     const isPro = planId === 'pro';
                     const price = isYearly ? plan.yearlyPrice : plan.price;
-                    const displayPrice = isYearly ? Math.round(price / 12) : price;
+                    const monthlyEquivalent = isYearly ? Math.round(plan.yearlyPrice / 12) : plan.price;
 
                     return (
                         <Card
@@ -127,14 +127,21 @@ export function PricingCards() {
                                     {t(`${planId}.description`)}
                                 </CardDescription>
 
-                                <div className="mt-6 flex items-baseline">
-                                    <span className="text-3xl font-bold text-[#0F172A] mr-1">{tCommon('currency')}</span>
-                                    <span className="text-5xl font-extrabold text-[#0F172A] tracking-tight">
-                                        {displayPrice.toLocaleString()}
-                                    </span>
-                                    <span className="text-sm font-medium text-slate-400 ml-2">
-                                        {tCommon('period')}
-                                    </span>
+                                <div className="mt-6 flex flex-col">
+                                    <div className="flex items-baseline">
+                                        <span className="text-3xl font-bold text-[#0F172A] mr-1">{tCommon('currency')}</span>
+                                        <span className="text-5xl font-extrabold text-[#0F172A] tracking-tight">
+                                            {price.toLocaleString()}
+                                        </span>
+                                        <span className="text-sm font-medium text-slate-400 ml-2">
+                                            {isYearly ? tCommon('yearly_period') || 'ต่อปี' : tCommon('period')}
+                                        </span>
+                                    </div>
+                                    {isYearly && (
+                                        <p className="text-xs text-emerald-600 font-medium mt-1">
+                                            (เฉลี่ยเพียง {monthlyEquivalent.toLocaleString()} {tCommon('currency')} {tCommon('period')})
+                                        </p>
+                                    )}
                                 </div>
                             </CardHeader>
 

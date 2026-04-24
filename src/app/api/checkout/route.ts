@@ -45,6 +45,10 @@ export async function POST(req: NextRequest) {
                 {
                     price: priceId,
                     quantity: 1,
+                    // Add a clearer description for yearly plans
+                    description: isYearly 
+                        ? `${plan.name} Package (ชำระรายปี - ใช้งานได้ 12 เดือน)` 
+                        : `${plan.name} Package (ชำระรายเดือน)`,
                 },
             ],
             mode: mode as any,
