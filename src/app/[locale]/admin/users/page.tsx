@@ -18,7 +18,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 
 interface UserProfile {
     uid: string;
@@ -31,6 +31,7 @@ interface UserProfile {
 }
 
 export default function AdminUsersPage() {
+    const { toast } = useToast();
     const { user: currentUser } = useUser();
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -75,15 +76,15 @@ export default function AdminUsersPage() {
             });
 
             if (res.ok) {
-                toast.success(`Role updated to ${newRole}`);
+                toast({ title: 'Success', description: `Role updated to ${newRole}` });
                 fetchUsers(); // Refresh list
             } else {
                 const data = await res.json();
-                toast.error(data.error || 'Failed to update role');
+                toast({ variant: 'destructive', title: 'Error', description: data.error || 'Failed to update role' });
             }
         } catch (error) {
             console.error('Failed to update role:', error);
-            toast.error('An error occurred while updating role');
+            toast({ variant: 'destructive', title: 'Error', description: 'An error occurred while updating role' });
         }
     };
 
@@ -101,15 +102,15 @@ export default function AdminUsersPage() {
             });
 
             if (res.ok) {
-                toast.success('User deleted successfully');
+                toast({ title: 'Success', description: 'User deleted successfully' });
                 fetchUsers(); // Refresh list
             } else {
                 const data = await res.json();
-                toast.error(data.error || 'Failed to delete user');
+                toast({ variant: 'destructive', title: 'Error', description: data.error || 'Failed to delete user' });
             }
         } catch (error) {
             console.error('Failed to delete user:', error);
-            toast.error('An error occurred while deleting user');
+            toast({ variant: 'destructive', title: 'Error', description: 'An error occurred while deleting user' });
         }
     };
 
