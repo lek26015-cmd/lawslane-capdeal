@@ -76,11 +76,12 @@ function SignupPageContent() {
             const user = userCredential.user;
 
             const idToken = await user.getIdToken();
-            await fetch('/api/auth/session', {
+            const sessionRes = await fetch('/api/auth/session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken }),
+                body: JSON.stringify({ idToken, redirect: redirectUrl }),
             });
+            const { suggestedRedirect } = await sessionRes.json();
 
             await updateProfile(user, { displayName: values.name });
 
@@ -114,10 +115,10 @@ function SignupPageContent() {
 
             toast({
                 title: 'สมัครสมาชิกสำเร็จ',
-                description: 'กำลังนำคุณไปยังแดชบอร์ด...',
+                description: 'กำลังนำคุณไปยังหน้าที่ทำค้างไว้...',
             });
 
-            const target = redirectUrl || '/dashboard';
+            const target = suggestedRedirect || redirectUrl || '/dashboard';
             if (target.startsWith('http')) {
                 window.location.href = target;
             } else {
@@ -153,11 +154,12 @@ function SignupPageContent() {
             const user = result.user;
 
             const idToken = await user.getIdToken();
-            await fetch('/api/auth/session', {
+            const sessionRes = await fetch('/api/auth/session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken }),
+                body: JSON.stringify({ idToken, redirect: redirectUrl }),
             });
+            const { suggestedRedirect } = await sessionRes.json();
 
             const userRef = doc(firestore, 'users', user.uid);
             const userSnap = await getDoc(userRef);
@@ -195,9 +197,9 @@ function SignupPageContent() {
 
             toast({
                 title: 'ลงชื่อเข้าใช้ด้วย Google สำเร็จ',
-                description: 'กำลังนำคุณไปยังแดชบอร์ด...',
+                description: 'กำลังนำคุณไปยังหน้าที่ทำค้างไว้...',
             });
-            const target = redirectUrl || '/dashboard';
+            const target = suggestedRedirect || redirectUrl || '/dashboard';
             if (target.startsWith('http')) {
                 window.location.href = target;
             } else {
@@ -327,7 +329,7 @@ function SignupPageContent() {
                         <div className="text-center">
                             <p className="text-slate-500">
                                 มีบัญชีอยู่แล้ว?{' '}
-                                <Link href={`/login`} className="text-[#0B3979] font-semibold hover:underline decoration-2 underline-offset-4">
+                                <Link href={`/login${redirectUrl ? `?redirect=${encodeURIComponent(redirectUrl)}` : ''}`} className="text-[#0B3979] font-semibold hover:underline decoration-2 underline-offset-4">
                                     เข้าสู่ระบบที่นี่
                                 </Link>
                             </p>

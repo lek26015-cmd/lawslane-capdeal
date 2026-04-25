@@ -249,7 +249,7 @@ function LoginPageContent() {
 
             toast({
                 title: 'เข้าสู่ระบบด้วย Google สำเร็จ',
-                description: 'กำลังนำคุณไปยังแดชบอร์ด...',
+                description: 'กำลังนำคุณไปยังหน้าที่ทำค้างไว้...',
             });
 
             if (suggestedRedirect.startsWith('http')) {
@@ -356,7 +356,7 @@ function LoginPageContent() {
 
                         toast({
                             title: 'เข้าสู่ระบบด้วย LINE สำเร็จ',
-                            description: 'กำลังนำคุณไปยังแดชบอร์ด...',
+                            description: 'กำลังนำคุณไปยังหน้าที่ทำค้างไว้...',
                         });
 
                         if (suggestedRedirect.startsWith('http')) {
@@ -512,7 +512,7 @@ function LoginPageContent() {
                         <div className="text-center">
                             <p className="text-slate-500">
                                 ยังไม่มีบัญชี?{' '}
-                                <Link href={`/signup`} className="text-[#0B3979] font-semibold hover:underline decoration-2 underline-offset-4">
+                                <Link href={`/signup${redirectUrl ? `?redirect=${encodeURIComponent(redirectUrl)}` : ''}`} className="text-[#0B3979] font-semibold hover:underline decoration-2 underline-offset-4">
                                     สมัครสมาชิกที่นี่
                                 </Link>
                             </p>

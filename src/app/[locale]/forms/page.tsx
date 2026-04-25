@@ -156,15 +156,8 @@ export default function FormsPage() {
 
     const handleDownload = async (form: LegalForm, attachment: LegalFormAttachment) => {
         if (!user) {
-            if (guestDownloads >= 3) {
-                setShowLoginDialog(true);
-                return;
-            }
-
-            // Increment guest download count
-            const newCount = guestDownloads + 1;
-            setGuestDownloads(newCount);
-            localStorage.setItem('guest_downloads', newCount.toString());
+            setShowLoginDialog(true);
+            return;
         }
 
         // Increment server-side counter
@@ -438,7 +431,7 @@ export default function FormsPage() {
                             {t('loginDialog.title')}
                         </DialogTitle>
                         <DialogDescription className="pt-2">
-                            {t('loginDialog.description')}
+                            กรุณาเข้าสู่ระบบเพื่อดาวน์โหลดเอกสารและเก็บประวัติการดาวน์โหลดของคุณไว้ในบัญชีส่วนตัว
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
@@ -446,7 +439,7 @@ export default function FormsPage() {
                             {t('loginDialog.cancel')}
                         </Button>
                         <Button asChild className="bg-[#0B3979] hover:bg-[#082a5a]">
-                            <Link href="/login">
+                            <Link href={`/${locale}/login?redirect=/${locale}/forms`}>
                                 {t('loginDialog.loginSignup')}
                             </Link>
                         </Button>

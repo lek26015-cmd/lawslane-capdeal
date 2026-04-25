@@ -8,10 +8,21 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, Send, Bot, User, FileText } from 'lucide-react';
 import { generateLegalAdvice } from '@/ai/flows/legal-qa-flow';
 import { useLocale, useTranslations } from 'next-intl';
+import { useUser } from '@/firebase';
+import { useRouter } from 'next/navigation';
 
 export default function AiAdvisorPage() {
     const t = useTranslations('AiAdvisor');
     const locale = useLocale();
+    const router = useRouter();
+    const { user, isUserLoading } = useUser();
+    
+    useEffect(() => {
+        if (!isUserLoading && !user) {
+            router.push(`/${locale}/login?redirect=/${locale}/ai-advisor`);
+        }
+    }, [user, isUserLoading, router, locale]);
+
     const [messages, setMessages] = useState<{ role: 'user' | 'ai'; content: string }[]>([
         { role: 'ai', content: t('welcomeMessage') }
     ]);
@@ -24,6 +35,14 @@ export default function AiAdvisorPage() {
             scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
         }
     }, [messages]);
+
+    if (isUserLoading || !user) {
+        return (
+            <div className="flex justify-center items-center h-screen">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            </div>
+        );
+    }
 
     const handleSend = async () => {
         if (!input.trim() || isLoading) return;

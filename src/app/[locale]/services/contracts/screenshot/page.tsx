@@ -388,7 +388,7 @@ export default function ScreenshotToContractPage() {
         }
 
         setShowLoginDialog(false);
-        router.push(`/${locale}/login?redirect=/services/contracts/screenshot`);
+        router.push(`/${locale}/login?redirect=/${locale}/services/contracts/screenshot`);
     };
 
     const proceedCreateContract = async () => {
@@ -422,7 +422,7 @@ export default function ScreenshotToContractPage() {
                 deadline: contractData.deadline || '',
                 paymentTerms: contractData.paymentTerms || '',
                 status: 'draft',
-                ownerId: user?.uid || 'anonymous',
+                ownerId: user!.uid,
             });
 
             setCreatedContractId(id);
@@ -553,9 +553,8 @@ export default function ScreenshotToContractPage() {
                     <div className="py-4">
                         <div className="p-5 rounded-2xl bg-blue-50 border border-blue-100 shadow-sm">
                             <p className="text-sm text-blue-800">
-                                💡 <strong>หมายเหตุ:</strong> หากคุณต้องการบันทึกเป็น PDF แทน
-                                สามารถกด &quot;ยกเลิก&quot; แล้วเลือกปุ่ม &quot;บันทึก PDF&quot; ได้เลย
-                                โดยไม่ต้องเข้าสู่ระบบ
+                                เพื่อความปลอดภัยและเพื่อให้คุณสามารถติดตามประวัติสัญญาย้อนหลังได้
+                                กรุณาเข้าสู่ระบบก่อนเริ่มการร่างสัญญา
                             </p>
                         </div>
                     </div>
@@ -595,6 +594,12 @@ export default function ScreenshotToContractPage() {
                                     <CardTitle className="text-xl md:text-2xl font-bold text-slate-800 text-center">
                                         อัปโหลดรูปแชทเพื่อเริ่มร่างสัญญา
                                     </CardTitle>
+                                    {!user && (
+                                        <p className="text-sm text-blue-600 bg-blue-50 py-2 px-4 rounded-full text-center mt-3 font-medium flex items-center justify-center gap-2">
+                                            <LogIn className="w-4 h-4" />
+                                            กรุณาเข้าสู่ระบบก่อนเริ่มการร่างสัญญา
+                                        </p>
+                                    )}
                                 </CardHeader>
                                 <CardContent className="space-y-8 p-8 max-w-xl mx-auto">
                                     <div className="w-full grid grid-cols-2 gap-4">

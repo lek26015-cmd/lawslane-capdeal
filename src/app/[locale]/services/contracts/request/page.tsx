@@ -8,17 +8,36 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FadeIn } from '@/components/fade-in';
-import { Upload, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Upload, FileText, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
+import { useUser } from '@/firebase';
+import { useRouter } from 'next/navigation';
 
 export default function ContractRequestPage() {
     const t = useTranslations('ContractsRequest');
+    const locale = useLocale();
+    const router = useRouter();
+    const { user, isUserLoading } = useUser();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [file, setFile] = useState<File | null>(null);
+
+    React.useEffect(() => {
+        if (!isUserLoading && !user) {
+            router.push(`/${locale}/login?redirect=/${locale}/services/contracts/request`);
+        }
+    }, [user, isUserLoading, router, locale]);
+
+    if (isUserLoading || !user) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-50">
+                <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
+            </div>
+        );
+    }
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
