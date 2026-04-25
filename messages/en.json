@@ -107,7 +107,8 @@
                     "No Lawslane watermark on documents",
                     "High-speed AI processing",
                     "Unlimited contract history storage",
-                    "Support for long chat screenshots"
+                    "Support for long chat screenshots",
+                    "Support for contract attachments"
                 ],
                 "cta": "Get Started"
             },
@@ -119,7 +120,8 @@
                 "features": [
                     "Analyze and create 100 contracts/month",
                     "All features in Lite plan",
-                    "Support for multi-party agreements"
+                    "Support for multi-party agreements",
+                    "Support for contract attachments"
                 ],
                 "cta": "Get Started"
             },
@@ -130,7 +132,8 @@
                 "features": [
                     "Analyze and create 1,000 contracts/month",
                     "All features in Pro plan",
-                    "Contract management system for teams"
+                    "Contract management system for teams",
+                    "Support for contract attachments"
                 ],
                 "cta": "Get Started"
             }

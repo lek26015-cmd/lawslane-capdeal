@@ -20,10 +20,10 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
         yearlyPrice: 0,
         interval: 'month',
         features: [
-            'Analyze and create 8 contracts/month',
-            'Support Line, Messenger, and other apps',
-            'Draft basic legal agreements',
-            'Download ready-to-use PDF'
+            'วิเคราะห์แชทและสร้างสัญญา 8 ฉบับ/เดือน',
+            'รองรับ Line, Messenger และแอปแชทอื่น',
+            'ร่างสัญญากู้ยืม, ซื้อขาย, จ้างงานเบื้องต้น',
+            'ดาวน์โหลดไฟล์ PDF พร้อมใช้งาน'
         ],
         limits: {
             dealsPerMonth: 8,
@@ -37,11 +37,12 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
         yearlyPrice: 1590, // 159 * 10 months (2 months free)
         interval: 'month',
         features: [
-            'Analyze and create 30 contracts/month',
-            'No Lawslane watermark',
-            'High-speed AI processing',
-            'Unlimited history storage',
-            'Long chat screenshot support'
+            'วิเคราะห์แชทและสร้างสัญญา 30 ฉบับ/เดือน',
+            'ไม่มีลายน้ำ Lawslane บนเอกสาร',
+            'ประมวลผลด้วย AI ความเร็วสูง',
+            'เก็บประวัติสัญญาย้อนหลังได้ไม่จำกัด',
+            'รองรับการแคปหน้าจอแชทแบบยาว',
+            'สามารถแนบเอกสารแนบท้ายสัญญาได้'
         ],
         limits: {
             dealsPerMonth: 30,
@@ -56,11 +57,10 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
         yearlyPrice: 2490, // 249 * 10 months (2 months free)
         interval: 'month',
         features: [
-            'Analyze and create 100 contracts/month',
-            'All features in Lite plan',
-            'Full legal templates access',
-            'Priority AI processing',
-            'Support for multi-party agreements'
+            'วิเคราะห์แชทและสร้างสัญญา 100 ฉบับ/เดือน',
+            'ทุกฟีเจอร์ในแพ็กเกจ Lite',
+            'รองรับคู่สัญญาหลายฝ่าย',
+            'สามารถแนบเอกสารแนบท้ายสัญญาได้'
         ],
         limits: {
             dealsPerMonth: 100,
@@ -75,11 +75,10 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
         yearlyPrice: 10490, // 1049 * 10 months (2 months free)
         interval: 'month',
         features: [
-            'Analyze and create 1,000 contracts/month',
-            'All features in Pro plan',
-            'Advanced AI analysis models',
-            'Team collaboration tools',
-            'Contract management system for teams'
+            'วิเคราะห์แชทและสร้างสัญญา 1,000 ฉบับ/เดือน',
+            'ทุกฟีเจอร์ในแพ็กเกจ Pro',
+            'ระบบจัดการสัญญาสำหรับทีมและองค์กร',
+            'สามารถแนบเอกสารแนบท้ายสัญญาได้'
         ],
         limits: {
             dealsPerMonth: 1000,

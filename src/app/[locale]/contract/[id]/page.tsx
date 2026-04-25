@@ -194,6 +194,12 @@ export default function ContractSigningPage() {
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files?.length || !contract || !user) return;
 
+        // Restriction: Only Lite and above can add attachments
+        if (planId === 'free') {
+            alert('กรุณาอัปเกรดเป็นแพ็กเกจ Lite เพื่อเริ่มใช้ฟีเจอร์แนบเอกสารท้ายสัญญา');
+            return;
+        }
+
         const file = e.target.files[0];
         setIsUploading(true);
 
