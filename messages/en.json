@@ -54,7 +54,7 @@
                     "description": "You'll get a legally sound contract draft, ready to download as PDF or send to your counterparty immediately."
                 }
             },
-            "freeTier": "Start for free with 8 contracts per month"
+            "freeTier": "Start for free with 2 contracts per month"
         },
         "features": {
             "title": "Why Choose Lawslane CapDeal?",
@@ -91,7 +91,7 @@
                 "description": "Ideal for individual beginners.",
                 "unit": "contracts/month",
                 "features": [
-                    "Analyze and create 8 contracts/month",
+                    "Analyze and create 2 contracts/month",
                     "Support Line, Messenger, and other apps",
                     "Draft basic legal agreements",
                     "Download ready-to-use PDF"

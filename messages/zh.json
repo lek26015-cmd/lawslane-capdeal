@@ -54,7 +54,7 @@
                     "description": "您将获得符合法律原则的合同草案，可以立即下载为 PDF 或转发给交易对手"
                 }
             },
-            "freeTier": "每月免费开始 8 份合同"
+            "freeTier": "每月免费开始 2 份合同"
         },
         "features": {
             "title": "为什么选择 Lawslane CapDeal?",
@@ -91,7 +91,7 @@
                 "description": "适合个别初学者。",
                 "unit": "份合同/月",
                 "features": [
-                    "每月分析并创建 8 份合同",
+                    "每月分析并创建 2 份合同",
                     "支持 Line、Messenger 等聊天应用",
                     "起草基础法律协议 (借贷、买卖、劳务)",
                     "下载即用 PDF 文件"

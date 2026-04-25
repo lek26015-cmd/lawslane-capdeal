@@ -20,13 +20,13 @@ export const SUBSCRIPTION_PLANS: Record<string, SubscriptionPlan> = {
         yearlyPrice: 0,
         interval: 'month',
         features: [
-            'วิเคราะห์แชทและสร้างสัญญา 8 ฉบับ/เดือน',
+            'วิเคราะห์แชทและสร้างสัญญา 2 ฉบับ/เดือน',
             'รองรับ Line, Messenger และแอปแชทอื่น',
             'ร่างสัญญากู้ยืม, ซื้อขาย, จ้างงานเบื้องต้น',
             'ดาวน์โหลดไฟล์ PDF พร้อมใช้งาน'
         ],
         limits: {
-            dealsPerMonth: 8,
+            dealsPerMonth: 2,
         },
         stripePriceId: '',
     },
