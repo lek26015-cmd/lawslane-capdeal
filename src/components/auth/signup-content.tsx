@@ -167,8 +167,11 @@ function SignupPageContent() {
                     uid: user.uid,
                     name: user.displayName,
                     email: user.email,
+                    avatar: user.photoURL, // Pulling the Google Profile Picture
                     role: 'customer',
                     status: 'active',
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
                 };
                 setDoc(userRef, userProfileData)
                     .catch(error => {
@@ -179,6 +182,15 @@ function SignupPageContent() {
                         });
                         errorEmitter.emit('permission-error', permissionError);
                     });
+            } else {
+                // Existing user - update avatar if it's missing
+                const userData = userSnap.data();
+                if (!userData.avatar && user.photoURL) {
+                    await setDoc(userRef, {
+                        avatar: user.photoURL,
+                        updatedAt: serverTimestamp(),
+                    }, { merge: true });
+                }
             }
 
             toast({

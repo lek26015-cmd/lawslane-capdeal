@@ -220,6 +220,33 @@ function LoginPageContent() {
 
             const { suggestedRedirect } = await sessionRes.json();
 
+            // Sync user profile to Firestore (including profile image from Google)
+            const userRef = doc(firestore, 'users', user.uid);
+            const userSnap = await getDoc(userRef);
+
+            if (!userSnap.exists()) {
+                // New user via Google Login
+                await setDoc(userRef, {
+                    uid: user.uid,
+                    name: user.displayName,
+                    email: user.email,
+                    avatar: user.photoURL, // Pulling the Google Profile Picture
+                    role: 'customer',
+                    status: 'active',
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp(),
+                });
+            } else {
+                // Existing user - update avatar if it's missing
+                const userData = userSnap.data();
+                if (!userData.avatar && user.photoURL) {
+                    await setDoc(userRef, {
+                        avatar: user.photoURL,
+                        updatedAt: serverTimestamp(),
+                    }, { merge: true });
+                }
+            }
+
             toast({
                 title: 'เข้าสู่ระบบด้วย Google สำเร็จ',
                 description: 'กำลังนำคุณไปยังแดชบอร์ด...',
