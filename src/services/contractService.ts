@@ -28,7 +28,7 @@ export interface ContractData {
     // B2B & CLM Fields
     companyId?: string; // For B2B isolation
     ownerId: string;    // Creator of the contract
-    category?: 'employment' | 'sales' | 'nda' | 'service' | 'other';
+    category?: 'employment' | 'sales' | 'loan' | 'service' | 'nda' | 'other';
     notes?: string;
     attachments?: {
         name: string;

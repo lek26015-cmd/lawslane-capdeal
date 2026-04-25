@@ -18,7 +18,24 @@ interface ContractData {
     attachments?: { name: string; url: string; type: string; }[];
     createdAt?: any;
     hideWatermark?: boolean;
+    category?: string;
 }
+
+const getContractLabels = (category: string = 'other') => {
+    switch (category) {
+        case 'employment':
+        case 'service':
+            return { title: 'สัญญาจ้าง', p1: 'ผู้ว่าจ้าง', p2: 'ผู้รับจ้าง', p1En: 'EMPLOYER', p2En: 'CONTRACTOR' };
+        case 'sales':
+            return { title: 'สัญญาซื้อขาย', p1: 'ผู้ซื้อ', p2: 'ผู้ขาย', p1En: 'BUYER', p2En: 'SELLER' };
+        case 'loan':
+            return { title: 'สัญญากู้ยืมเงิน', p1: 'ผู้ให้กู้', p2: 'ผู้กู้', p1En: 'LENDER', p2En: 'BORROWER' };
+        case 'nda':
+            return { title: 'สัญญาไม่เปิดเผยข้อมูล', p1: 'ผู้เปิดเผยข้อมูล', p2: 'ผู้รับข้อมูล', p1En: 'DISCLOSING PARTY', p2En: 'RECEIVING PARTY' };
+        default:
+            return { title: 'สัญญา', p1: 'คู่สัญญาฝ่ายที่หนึ่ง', p2: 'คู่สัญญาฝ่ายที่สอง', p1En: 'PARTY A', p2En: 'PARTY B' };
+    }
+};
 
 // Format Thai date
 function formatThaiDate(date: Date): string {
@@ -81,12 +98,12 @@ export async function generateContractPDF(data: ContractData) {
         ${watermark}
         <div style="position: relative; z-index: 10;">
             <div style="text-align: center; margin-bottom: 40px;">
-                <h1 style="font-size: 32px; font-weight: bold; margin-bottom: 5px; color: #0f172a;">สัญญาจ้าง</h1>
+                <h1 style="font-size: 32px; font-weight: bold; margin-bottom: 5px; color: #0f172a;">${getContractLabels(data.category).title}</h1>
                 <p style="color: #64748b;">(ฉบับย่อ)</p>
             </div>
 
             <div style="text-align: right; margin-bottom: 40px;">
-                <p>ทำที่: ${employerAddress ? 'ตามที่อยู่ผู้ว่าจ้าง' : 'ข้อตกลงออนไลน์'}</p>
+                <p>ทำที่: ${employerAddress ? `ตามที่อยู่${getContractLabels(data.category).p1}` : 'ข้อตกลงออนไลน์'}</p>
                 <p>วันที่: ${data.createdAt ? formatThaiDate(data.createdAt.toDate ? data.createdAt.toDate() : new Date(data.createdAt)) : formatThaiDate(new Date())}</p>
             </div>
 
@@ -94,14 +111,14 @@ export async function generateContractPDF(data: ContractData) {
                 สัญญาฉบับนี้ทำขึ้นระหว่าง <strong>${employerName || '.....................'}</strong>
                 บัตรประชาชนเลขที่ <strong>${employerId || '.....................'}</strong>
                 อาศัยอยู่เลขที่ <strong>${employerAddress || '.....................'}</strong>
-                ซึ่งต่อไปในสัญญานี้เรียกว่า "ผู้ว่าจ้าง" ฝ่ายหนึ่ง
+                ซึ่งต่อไปในสัญญานี้เรียกว่า "${getContractLabels(data.category).p1}" ฝ่ายหนึ่ง
             </div>
 
             <div style="margin-bottom: 30px; text-align: justify; text-indent: 50px;">
                 กับ <strong>${contractorName || '.....................'}</strong>
                 บัตรประชาชนเลขที่ <strong>${contractorId || '.....................'}</strong>
                 อาศัยอยู่เลขที่ <strong>${contractorAddress || '.....................'}</strong>
-                ซึ่งต่อไปในสัญญานี้เรียกว่า "ผู้รับจ้าง" อีกฝ่ายหนึ่ง
+                ซึ่งต่อไปในสัญญานี้เรียกว่า "${getContractLabels(data.category).p2}" อีกฝ่ายหนึ่ง
             </div>
 
             <p style="margin-bottom: 20px; text-indent: 50px;">คู่สัญญาทั้งสองฝ่ายตกลงทำสัญญากันดังมีข้อความต่อไปนี้:</p>
@@ -114,7 +131,7 @@ export async function generateContractPDF(data: ContractData) {
             <div style="margin-left: 30px; margin-bottom: 20px;">
                 <p><strong>ข้อ 2. ค่าจ้างและเงื่อนไขการชำระเงิน</strong></p>
                 <p style="padding-left: 30px;">
-                    ผู้ว่าจ้างตกลงชำระค่าจ้างเป็นจำนวนเงินทั้งสิ้น <strong>${formatCurrency(data.price)} บาท</strong>
+                    ${getContractLabels(data.category).p1}ตกลงชำระค่าจ้างเป็นจำนวนเงินทั้งสิ้น <strong>${formatCurrency(data.price)} บาท</strong>
                     ${data.deposit > 0 ? `<br />- มัดจำ: <strong>${formatCurrency(data.deposit)} บาท</strong>` : ''}
                     <br />- เงื่อนไขการชำระเงิน: ${data.paymentTerms || 'ตามตกลงกัน'}
                 </p>
@@ -122,7 +139,7 @@ export async function generateContractPDF(data: ContractData) {
 
             <div style="margin-left: 30px;">
                 <p><strong>ข้อ 3. กำหนดเวลาและสถานที่ส่งมอบงาน</strong></p>
-                <p style="padding-left: 30px;">ผู้รับจ้างตกลงจะทำงานให้แล้วเสร็จภายใน <strong>${data.deadline}</strong></p>
+                <p style="padding-left: 30px;">${getContractLabels(data.category).p2}ตกลงจะทำงานให้แล้วเสร็จภายใน <strong>${data.deadline}</strong></p>
             </div>
         </div>
         <div style="position: absolute; bottom: 40px; width: 100%; left: 0; text-align: center; font-size: 11px; color: #cbd5e1;">Page 1 of 2</div>
@@ -135,7 +152,7 @@ export async function generateContractPDF(data: ContractData) {
         <div style="position: relative; z-index: 10;">
             <div style="margin-left: 30px; margin-bottom: 40px;">
                 <p><strong>ข้อ 4. การบอกเลิกสัญญา</strong></p>
-                <p style="padding-left: 30px;">หากผู้รับจ้างไม่สามารถทำงานให้แล้วเสร็จตามกำหนด หรือเจตนาทิ้งงาน ผู้ว่าจ้างมีสิทธิบอกเลิกสัญญาและเรียกร้องค่าเสียหายได้ทันที</p>
+                <p style="padding-left: 30px;">หาก${getContractLabels(data.category).p2}ไม่สามารถทำงานให้แล้วเสร็จตามกำหนด หรือเจตนาทิ้งงาน ${getContractLabels(data.category).p1}มีสิทธิบอกเลิกสัญญาและเรียกร้องค่าเสียหายได้ทันที</p>
             </div>
 
             <p style="text-indent: 50px; margin-bottom: 50px; text-align: justify;">
@@ -156,14 +173,14 @@ export async function generateContractPDF(data: ContractData) {
                     <div style="border-bottom: 1px dotted #000; height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
                         ${employerSignature ? `<img src="${employerSignature}" style="max-height: 80px; object-fit: contain;" />` : ''}
                     </div>
-                    <p>ลงชื่อ ผู้ว่าจ้าง</p>
+                    <p>ลงชื่อ ${getContractLabels(data.category).p1}</p>
                     <p style="color: #64748b;">( ${employerName || '.....................'} )</p>
                 </div>
                 <div style="text-align: center; width: 45%;">
                     <div style="border-bottom: 1px dotted #000; height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
                         ${contractorSignature ? `<img src="${contractorSignature}" style="max-height: 80px; object-fit: contain;" />` : ''}
                     </div>
-                    <p>ลงชื่อ ผู้รับจ้าง</p>
+                    <p>ลงชื่อ ${getContractLabels(data.category).p2}</p>
                     <p style="color: #64748b;">( ${contractorName || '.....................'} )</p>
                 </div>
             </div>

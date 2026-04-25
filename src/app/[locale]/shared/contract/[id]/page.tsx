@@ -44,6 +44,22 @@ import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { generateContractPDF } from '@/lib/contract-pdf';
 
+const getContractLabels = (category: string = 'other') => {
+    switch (category) {
+        case 'employment':
+        case 'service':
+            return { title: 'สัญญาจ้าง', p1: 'ผู้ว่าจ้าง', p2: 'ผู้รับจ้าง', p1En: 'EMPLOYER', p2En: 'CONTRACTOR' };
+        case 'sales':
+            return { title: 'สัญญาซื้อขาย', p1: 'ผู้ซื้อ', p2: 'ผู้ขาย', p1En: 'BUYER', p2En: 'SELLER' };
+        case 'loan':
+            return { title: 'สัญญากู้ยืมเงิน', p1: 'ผู้ให้กู้', p2: 'ผู้กู้', p1En: 'LENDER', p2En: 'BORROWER' };
+        case 'nda':
+            return { title: 'สัญญาไม่เปิดเผยข้อมูล', p1: 'ผู้เปิดเผยข้อมูล', p2: 'ผู้รับข้อมูล', p1En: 'DISCLOSING PARTY', p2En: 'RECEIVING PARTY' };
+        default:
+            return { title: 'สัญญา', p1: 'คู่สัญญาฝ่ายที่หนึ่ง', p2: 'คู่สัญญาฝ่ายที่สอง', p1En: 'PARTY A', p2En: 'PARTY B' };
+    }
+};
+
 export default function SharedContractPage() {
     const params = useParams();
     const id = params.id as string;
@@ -214,7 +230,7 @@ export default function SharedContractPage() {
                             <div className="flex items-center gap-3 mb-1">
                                 <h1 className="text-2xl md:text-3xl font-bold text-slate-800 flex items-center gap-2">
                                     <FileSignature className="w-8 h-8 text-blue-600" />
-                                    สัญญาจ้างงาน
+                                    {getContractLabels(contract.category).title}
                                 </h1>
                                 {contract.status === 'signed' ? (
                                     <Badge className="bg-green-100 text-green-700">เซ็นครบแล้ว</Badge>
@@ -239,13 +255,13 @@ export default function SharedContractPage() {
                         <Card className="border-none shadow-2xl rounded-sm bg-white overflow-hidden relative min-h-[600px] flex flex-col">
                             <CardContent className="p-8 md:p-16 lg:p-20 space-y-8 font-serif leading-[1.8] text-slate-800 relative z-10">
                                 <div className="text-center space-y-2 mb-12">
-                                    <h2 className="text-3xl font-bold tracking-wide text-slate-900">สัญญาจ้าง</h2>
+                                    <h2 className="text-3xl font-bold tracking-wide text-slate-900">{getContractLabels(contract.category).title}</h2>
                                     <p className="text-slate-400 font-sans text-sm">(ฉบับออนไลน์)</p>
                                 </div>
 
                                 <div className="space-y-6 text-[16px] md:text-[17px]">
                                     <p className="indent-12 text-justify">
-                                        สัญญาฉบับนี้ทำขึ้นระหว่าง <strong>{contract.employer.name || '…………………………………………'}</strong> (ผู้ว่าจ้าง) กับ <strong>{contract.contractor.name || '…………………………………………'}</strong> (ผู้รับจ้าง) โดยมีรายละเอียดดังต่อไปนี้:
+                                        สัญญาฉบับนี้ทำขึ้นระหว่าง <strong>{contract.employer.name || '…………………………………………'}</strong> ({getContractLabels(contract.category).p1}) กับ <strong>{contract.contractor.name || '…………………………………………'}</strong> ({getContractLabels(contract.category).p2}) โดยมีรายละเอียดดังต่อไปนี้:
                                     </p>
 
                                     <div className="space-y-6 pt-4 pl-4 border-l-2 border-slate-100">
@@ -323,12 +339,12 @@ export default function SharedContractPage() {
                                                     className="text-blue-600 hover:bg-blue-50 gap-2 h-16 w-full max-w-[200px] border-2 border-dashed border-blue-100 rounded-xl"
                                                 >
                                                     <PenTool className="w-4 h-4" />
-                                                    เซ็นชื่อ (ผู้ว่าจ้าง)
+                                                    เซ็นชื่อ ({getContractLabels(contract.category).p1})
                                                 </Button>
                                             )}
                                         </div>
                                         <div className="text-sm">
-                                            <p className="font-bold text-slate-800">ผู้ว่าจ้าง</p>
+                                            <p className="font-bold text-slate-800">{getContractLabels(contract.category).p1}</p>
                                             <p className="text-slate-500">( {contract.employer.name || '…………………………………………'} )</p>
                                             {contract.employer.signedAt && <p className="text-[10px] text-slate-400 mt-1">{formatDate(contract.employer.signedAt)}</p>}
                                         </div>
@@ -346,12 +362,12 @@ export default function SharedContractPage() {
                                                     className="text-blue-600 hover:bg-blue-50 gap-2 h-16 w-full max-w-[200px] border-2 border-dashed border-blue-100 rounded-xl"
                                                 >
                                                     <PenTool className="w-4 h-4" />
-                                                    เซ็นชื่อ (ผู้รับจ้าง)
+                                                    เซ็นชื่อ ({getContractLabels(contract.category).p2})
                                                 </Button>
                                             )}
                                         </div>
                                         <div className="text-sm">
-                                            <p className="font-bold text-slate-800">ผู้รับจ้าง</p>
+                                            <p className="font-bold text-slate-800">{getContractLabels(contract.category).p2}</p>
                                             <p className="text-slate-500">( {contract.contractor.name || '…………………………………………'} )</p>
                                             {contract.contractor.signedAt && <p className="text-[10px] text-slate-400 mt-1">{formatDate(contract.contractor.signedAt)}</p>}
                                         </div>
@@ -372,7 +388,7 @@ export default function SharedContractPage() {
                             ลงลายมือชื่อ
                         </DialogTitle>
                         <DialogDescription className="text-slate-500">
-                            กรุณาเซ็นชื่อในฐานะ {signingRole === 'employer' ? 'ผู้ว่าจ้าง' : 'ผู้รับจ้าง'} เพื่อยืนยันสัญญา
+                            กรุณาเซ็นชื่อในฐานะ {signingRole === 'employer' ? getContractLabels(contract.category).p1 : getContractLabels(contract.category).p2} เพื่อยืนยันสัญญา
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-6">

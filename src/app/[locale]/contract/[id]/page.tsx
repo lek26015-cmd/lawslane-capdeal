@@ -20,6 +20,13 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -37,6 +44,22 @@ import { generateContractPDF } from '@/lib/contract-pdf';
 import { useUser } from '@/firebase';
 import { useSubscription } from '@/hooks/useSubscription';
 import { uploadToR2 } from '@/app/actions/upload-r2';
+
+const getContractLabels = (category: string = 'other') => {
+    switch (category) {
+        case 'employment':
+        case 'service':
+            return { title: 'สัญญาจ้าง', p1: 'ผู้ว่าจ้าง', p2: 'ผู้รับจ้าง', p1En: 'EMPLOYER', p2En: 'CONTRACTOR' };
+        case 'sales':
+            return { title: 'สัญญาซื้อขาย', p1: 'ผู้ซื้อ', p2: 'ผู้ขาย', p1En: 'BUYER', p2En: 'SELLER' };
+        case 'loan':
+            return { title: 'สัญญากู้ยืมเงิน', p1: 'ผู้ให้กู้', p2: 'ผู้กู้', p1En: 'LENDER', p2En: 'BORROWER' };
+        case 'nda':
+            return { title: 'สัญญาไม่เปิดเผยข้อมูล', p1: 'ผู้เปิดเผยข้อมูล', p2: 'ผู้รับข้อมูล', p1En: 'DISCLOSING PARTY', p2En: 'RECEIVING PARTY' };
+        default:
+            return { title: 'สัญญา', p1: 'คู่สัญญาฝ่ายที่หนึ่ง', p2: 'คู่สัญญาฝ่ายที่สอง', p1En: 'PARTY A', p2En: 'PARTY B' };
+    }
+};
 
 export default function ContractSigningPage() {
     const params = useParams();
@@ -297,7 +320,7 @@ export default function ContractSigningPage() {
                             <div className="flex items-center gap-3 mb-2">
                                 <h1 className="text-2xl md:text-3xl font-bold text-slate-800 flex items-center gap-2">
                                     <FileSignature className="w-8 h-8 text-blue-600" />
-                                    สัญญาจ้างงาน
+                                    {getContractLabels(contract.category).title}
                                 </h1>
                                 <StatusBadge />
                             </div>
@@ -331,16 +354,36 @@ export default function ContractSigningPage() {
                                                 <DialogHeader>
                                                     <DialogTitle>แก้ไขรายละเอียดสัญญา</DialogTitle>
                                                     <DialogDescription>
-                                                        แก้ไขข้อมูลรายละเอียดของสัญญาจ้างได้ตราบใดที่ยังไม่มีใครลงนาม
+                                                        แก้ไขข้อมูลรายละเอียดของสัญญาได้ตราบใดที่ยังไม่มีใครลงนาม
                                                     </DialogDescription>
                                                 </DialogHeader>
                                                 <div className="space-y-4 py-4">
+                                                    {/* Category Selection */}
+                                                    <div className="space-y-2">
+                                                        <Label>ประเภทสัญญา</Label>
+                                                        <Select 
+                                                            value={editData.category || 'other'} 
+                                                            onValueChange={(val) => setEditData({ ...editData, category: val as any })}
+                                                        >
+                                                            <SelectTrigger className="w-full">
+                                                                <SelectValue placeholder="เลือกประเภทสัญญา" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="employment">สัญญาจ้าง (Employment)</SelectItem>
+                                                                <SelectItem value="service">สัญญาบริการ (Service)</SelectItem>
+                                                                <SelectItem value="sales">สัญญาซื้อขาย (Sales)</SelectItem>
+                                                                <SelectItem value="loan">สัญญากู้ยืมเงิน (Loan)</SelectItem>
+                                                                <SelectItem value="nda">สัญญาไม่เปิดเผยข้อมูล (NDA)</SelectItem>
+                                                                <SelectItem value="other">สัญญาอื่นๆ (Other)</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
                                                     {/* Employer Details */}
                                                     <div className="p-4 bg-slate-50 rounded-lg space-y-4">
-                                                        <h3 className="font-medium text-slate-800 border-b pb-2">ผู้ว่าจ้าง (Employer)</h3>
+                                                        <h3 className="font-medium text-slate-800 border-b pb-2">{getContractLabels(editData.category).p1} ({getContractLabels(editData.category).p1En})</h3>
                                                         <div className="grid grid-cols-2 gap-4">
                                                             <div className="space-y-2">
-                                                                <Label>ชื่อผู้ว่าจ้าง</Label>
+                                                                <Label>ชื่อ{getContractLabels(editData.category).p1}</Label>
                                                                 <Input
                                                                     value={editData.employer?.name || ''}
                                                                     onChange={(e) => setEditData({
@@ -374,10 +417,10 @@ export default function ContractSigningPage() {
 
                                                     {/* Contractor Details */}
                                                     <div className="p-4 bg-slate-50 rounded-lg space-y-4">
-                                                        <h3 className="font-medium text-slate-800 border-b pb-2">ผู้รับจ้าง (Contractor)</h3>
+                                                        <h3 className="font-medium text-slate-800 border-b pb-2">{getContractLabels(editData.category).p2} ({getContractLabels(editData.category).p2En})</h3>
                                                         <div className="grid grid-cols-2 gap-4">
                                                             <div className="space-y-2">
-                                                                <Label>ชื่อผู้รับจ้าง</Label>
+                                                                <Label>ชื่อ{getContractLabels(editData.category).p2}</Label>
                                                                 <Input
                                                                     value={editData.contractor?.name || ''}
                                                                     onChange={(e) => setEditData({
@@ -512,7 +555,7 @@ export default function ContractSigningPage() {
                                     )}
 
                                     <div className="text-center space-y-4 mb-8 relative z-10">
-                                        <h2 className="text-3xl font-bold tracking-wide text-slate-900 mb-1">สัญญาจ้าง</h2>
+                                        <h2 className="text-3xl font-bold tracking-wide text-slate-900 mb-1">{getContractLabels(contract.category).title}</h2>
                                         <p className="text-slate-500 font-sans">(ฉบับย่อ)</p>
                                     </div>
 
@@ -544,7 +587,7 @@ export default function ContractSigningPage() {
                                             ) : (
                                                 <> ตั้งอยู่หรืออาศัยอยู่เลขที่ <span className="text-slate-400">.................................................................................</span></>
                                             )}
-                                            ซึ่งต่อไปในสัญญานี้เรียกว่า <strong>"ผู้ว่าจ้าง"</strong> ฝ่ายหนึ่ง
+                                            ซึ่งต่อไปในสัญญานี้เรียกว่า <strong>"{getContractLabels(contract.category).p1}"</strong> ฝ่ายหนึ่ง
                                         </p>
 
                                         <p className="indent-12 text-justify">
@@ -559,7 +602,7 @@ export default function ContractSigningPage() {
                                             ) : (
                                                 <> ตั้งอยู่หรืออาศัยอยู่เลขที่ <span className="text-slate-400">.................................................................................</span></>
                                             )}
-                                            ซึ่งต่อไปในสัญญานี้เรียกว่า <strong>"ผู้รับจ้าง"</strong> อีกฝ่ายหนึ่ง
+                                            ซึ่งต่อไปในสัญญานี้เรียกว่า <strong>"{getContractLabels(contract.category).p2}"</strong> อีกฝ่ายหนึ่ง
                                         </p>
 
                                         <p className="indent-12">
@@ -570,7 +613,7 @@ export default function ContractSigningPage() {
                                             <div>
                                                 <p>
                                                     <strong>ข้อ 1. ขอบเขตของงาน</strong><br />
-                                                    ผู้ว่าจ้างตกลงจ้างและผู้รับจ้างตกลงรับจ้างทำงาน ดังต่อไปนี้:
+                                                    {getContractLabels(contract.category).p1}ตกลงจ้างและ{getContractLabels(contract.category).p2}ตกลงรับจ้างทำงาน ดังต่อไปนี้:
                                                 </p>
                                                 <div className="mt-2 pl-6 py-2 border-l-2 border-slate-200 text-slate-800 whitespace-pre-line bg-slate-50/50 rounded-r text-sm">
                                                     {contract.task}
@@ -580,7 +623,7 @@ export default function ContractSigningPage() {
                                             <div>
                                                 <p>
                                                     <strong>ข้อ 2. ค่าจ้างและเงื่อนไขการชำระเงิน</strong><br />
-                                                    ผู้ว่าจ้างตกลงชำระค่าจ้างให้แก่ผู้รับจ้างเป็นจำนวนเงิน <strong>{contract.price.toLocaleString()}</strong> บาท
+                                                    {getContractLabels(contract.category).p1}ตกลงชำระค่าจ้างให้แก่{getContractLabels(contract.category).p2}เป็นจำนวนเงิน <strong>{contract.price.toLocaleString()}</strong> บาท
                                                     <span className="text-[13px] text-slate-600 ml-1">(ยังไม่รวมภาษีมูลค่าเพิ่ม)</span><br />
                                                     {contract.deposit && contract.deposit > 0 ? (
                                                         <span className="block mt-1 pl-6">
@@ -596,7 +639,7 @@ export default function ContractSigningPage() {
                                             <div>
                                                 <p>
                                                     <strong>ข้อ 3. กำหนดเวลาและสถานที่ส่งมอบงาน</strong><br />
-                                                    ผู้รับจ้างตกลงจะทำงานที่รับจ้างให้แล้วเสร็จและส่งมอบงานให้แก่ผู้ว่าจ้างภายใน <strong>{contract.deadline}</strong>
+                                                    {getContractLabels(contract.category).p2}ตกลงจะทำงานที่รับจ้างให้แล้วเสร็จและส่งมอบงานให้แก่{getContractLabels(contract.category).p1}ภายใน <strong>{contract.deadline}</strong>
                                                 </p>
                                             </div>
                                         </div>
@@ -621,7 +664,7 @@ export default function ContractSigningPage() {
                                         <div className="space-y-6 leading-[1.9]">
                                             <p>
                                                 <strong>ข้อ 4. การบอกเลิกสัญญา</strong><br />
-                                                หากผู้รับจ้างไม่สามารถทำงานให้แล้วเสร็จตามกำหนด หรือเจตนาทิ้งงาน ผู้ว่าจ้างมีสิทธิบอกเลิกสัญญาและเรียกร้องค่าเสียหายได้ทันที
+                                                หาก{getContractLabels(contract.category).p2}ไม่สามารถทำงานให้แล้วเสร็จตามกำหนด หรือเจตนาทิ้งงาน {getContractLabels(contract.category).p1}มีสิทธิบอกเลิกสัญญาและเรียกร้องค่าเสียหายได้ทันที
                                             </p>
                                         </div>
 
@@ -834,7 +877,7 @@ export default function ContractSigningPage() {
                                                     )}
                                                 </div>
                                                 <div className="space-y-1">
-                                                    <p className="font-medium text-slate-900">ผู้รับจ้าง</p>
+                                                    <p className="font-medium text-slate-900">{getContractLabels(contract.category).p2}</p>
                                                     <p className="text-slate-500">( {contract.contractor.name || '…………………………………………'} )</p>
                                                 </div>
                                             </div>
@@ -852,7 +895,7 @@ export default function ContractSigningPage() {
                             {/* Employer Card */}
                             <Card className="border border-slate-200 shadow-sm overflow-hidden">
                                 <CardHeader className="bg-slate-50/50 pb-3">
-                                    <CardTitle className="text-sm font-semibold text-slate-500 uppercase tracking-wider">ผู้ว่าจ้าง (Employer)</CardTitle>
+                                    <CardTitle className="text-sm font-semibold text-slate-500 uppercase tracking-wider">{getContractLabels(contract.category).p1} ({getContractLabels(contract.category).p1En})</CardTitle>
                                 </CardHeader>
                                 <CardContent className="pt-4 space-y-4">
                                     <div className="flex items-center gap-3">
@@ -877,7 +920,7 @@ export default function ContractSigningPage() {
                             {/* Contractor Card */}
                             <Card className="border border-slate-200 shadow-sm overflow-hidden">
                                 <CardHeader className="bg-slate-50/50 pb-3">
-                                    <CardTitle className="text-sm font-semibold text-slate-500 uppercase tracking-wider">ผู้รับจ้าง (Contractor)</CardTitle>
+                                    <CardTitle className="text-sm font-semibold text-slate-500 uppercase tracking-wider">{getContractLabels(contract.category).p2} ({getContractLabels(contract.category).p2En})</CardTitle>
                                 </CardHeader>
                                 <CardContent className="pt-4 space-y-4">
                                     <div className="flex items-center gap-3">
@@ -962,14 +1005,14 @@ export default function ContractSigningPage() {
                                                 สัญญาฉบับนี้ทำขึ้นระหว่าง <strong>{contract.employer.name || '.....................'}</strong>
                                                 บัตรประจำตัวประชาชนเลขที่ <strong>{contract.employer.id_card || '.....................'}</strong>
                                                 ตั้งอยู่เลขที่ <strong>{contract.employer.address || '.....................'}</strong>
-                                                ซึ่งต่อไปในสัญญานี้เรียกว่า <strong>"ผู้ว่าจ้าง"</strong> ฝ่ายหนึ่ง
+                                                ซึ่งต่อไปในสัญญานี้เรียกว่า <strong>"{getContractLabels(contract.category).p1}"</strong> ฝ่ายหนึ่ง
                                             </p>
 
                                             <p className="indent-12 text-justify">
                                                 กับ <strong>{contract.contractor.name || '.....................'}</strong>
                                                 บัตรประจำตัวประชาชนเลขที่ <strong>{contract.contractor.id_card || '.....................'}</strong>
                                                 ตั้งอยู่เลขที่ <strong>{contract.contractor.address || '.....................'}</strong>
-                                                ซึ่งต่อไปในสัญญานี้เรียกว่า <strong>"ผู้รับจ้าง"</strong> อีกฝ่ายหนึ่ง
+                                                ซึ่งต่อไปในสัญญานี้เรียกว่า <strong>"{getContractLabels(contract.category).p2}"</strong> อีกฝ่ายหนึ่ง
                                             </p>
 
                                             <p className="indent-12">คู่สัญญาทั้งสองฝ่ายตกลงทำสัญญากันดังมีข้อความต่อไปนี้:</p>
@@ -1010,7 +1053,7 @@ export default function ContractSigningPage() {
                                         <div className="space-y-6">
                                             <div className="space-y-2 pl-6">
                                                 <p className="font-bold">ข้อ 4. การบอกเลิกสัญญา</p>
-                                                <p>หากผู้รับจ้างไม่สามารถทำงานให้แล้วเสร็จตามกำหนด หรือเจตนาทิ้งงาน ผู้ว่าจ้างมีสิทธิบอกเลิกสัญญาและเรียกร้องค่าเสียหายได้ทันที</p>
+                                                <p>หาก{getContractLabels(contract.category).p2}ไม่สามารถทำงานให้แล้วเสร็จตามกำหนด หรือเจตนาทิ้งงาน {getContractLabels(contract.category).p1}มีสิทธิบอกเลิกสัญญาและเรียกร้องค่าเสียหายได้ทันที</p>
                                             </div>
 
                                             <p className="indent-12 text-justify pt-8">
@@ -1062,7 +1105,7 @@ export default function ContractSigningPage() {
                                                         )}
                                                     </div>
                                                     <div className="space-y-1">
-                                                        <p className="font-medium text-slate-900">ผู้ว่าจ้าง</p>
+                                                        <p className="font-medium text-slate-900">{getContractLabels(contract.category).p1}</p>
                                                         <p className="text-slate-500">( {contract.employer.name || '…………………………………………'} )</p>
                                                     </div>
                                                 </div>
@@ -1099,7 +1142,7 @@ export default function ContractSigningPage() {
                                                         )}
                                                     </div>
                                                     <div className="space-y-1">
-                                                        <p className="font-medium text-slate-900">ผู้รับจ้าง</p>
+                                                        <p className="font-medium text-slate-900">{getContractLabels(contract.category).p2}</p>
                                                         <p className="text-slate-500">( {contract.contractor.name || '…………………………………………'} )</p>
                                                     </div>
                                                 </div>
@@ -1131,7 +1174,7 @@ export default function ContractSigningPage() {
                     <DialogHeader>
                         <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
                             <PenTool className="w-5 h-5 text-blue-600" />
-                            ลงลายมือชื่อ ({signingRole === 'employer' ? 'ผู้ว่าจ้าง' : 'ผู้รับจ้าง'})
+                            ลงลายมือชื่อ ({signingRole === 'employer' ? getContractLabels(contract.category).p1 : getContractLabels(contract.category).p2})
                         </DialogTitle>
                         <DialogDescription className="text-slate-500">
                             กรุณาเซ็นชื่อลงในช่องว่างด้านล่างเพื่อยืนยันสัญญาฉบับนี้
@@ -1230,7 +1273,7 @@ export default function ContractSigningPage() {
                             แชร์สัญญาให้คู่สัญญา
                         </DialogTitle>
                         <DialogDescription className="text-slate-500">
-                            ส่งลิงก์นี้ให้ผู้ว่าจ้างหรือผู้รับจ้างเพื่อดำเนินการเซ็นชื่อ
+                            ส่งลิงก์นี้ให้{getContractLabels(contract.category).p1}หรือ{getContractLabels(contract.category).p2}เพื่อดำเนินการเซ็นชื่อ
                         </DialogDescription>
                     </DialogHeader>
                     
