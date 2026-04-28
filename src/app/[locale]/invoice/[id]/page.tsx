@@ -21,6 +21,7 @@ export default function InvoicePage() {
     const [invoice, setInvoice] = useState<InvoiceData | null>(null);
     const [lawyer, setLawyer] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!id) return;
@@ -28,19 +29,26 @@ export default function InvoicePage() {
         const fetchData = async () => {
             try {
                 const data = await invoiceService.getInvoice(id);
-                setInvoice(data);
+                if (!data) {
+                    setError("NOT_FOUND");
+                    setInvoice(null);
+                } else {
+                    setInvoice(data);
+                    setError(null);
 
-                if (data?.lawyerId) {
-                    const { firestore } = initializeFirebase();
-                    if (firestore) {
-                        const lawyerDoc = await getDoc(doc(firestore, 'lawyerProfiles', data.lawyerId));
-                        if (lawyerDoc.exists()) {
-                            setLawyer(lawyerDoc.data());
+                    if (data.lawyerId) {
+                        const { firestore } = initializeFirebase();
+                        if (firestore) {
+                            const lawyerDoc = await getDoc(doc(firestore, 'lawyerProfiles', data.lawyerId));
+                            if (lawyerDoc.exists()) {
+                                setLawyer(lawyerDoc.data());
+                            }
                         }
                     }
                 }
-            } catch (error) {
-                console.error("Error fetching invoice:", error);
+            } catch (err: any) {
+                console.error("Error fetching invoice:", err);
+                setError(err.message || "An unexpected error occurred");
             } finally {
                 setLoading(false);
             }
@@ -73,7 +81,29 @@ export default function InvoicePage() {
         );
     }
 
-    if (!invoice) {
+    if (error && error !== "NOT_FOUND") {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4">
+                <div className="text-center space-y-6 max-w-md">
+                    <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto">
+                        <AlertTriangle className="w-10 h-10 text-amber-500" />
+                    </div>
+                    <div className="space-y-2">
+                        <h1 className="text-2xl font-bold text-slate-800">เกิดข้อผิดพลาดในการโหลดข้อมูล</h1>
+                        <p className="text-slate-600 font-mono text-xs p-3 bg-slate-100 rounded-lg">{error}</p>
+                    </div>
+                    <Button 
+                        onClick={() => window.location.reload()}
+                        className="bg-slate-800 hover:bg-black text-white w-full py-6 rounded-xl text-lg font-bold shadow-lg"
+                    >
+                        ลองใหม่อีกครั้ง
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
+    if (!invoice || error === "NOT_FOUND") {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4">
                 <div className="text-center space-y-6 max-w-md">
@@ -82,7 +112,7 @@ export default function InvoicePage() {
                     </div>
                     <div className="space-y-2">
                         <h1 className="text-2xl font-bold text-slate-800">ไม่พบเอกสารที่ต้องการ</h1>
-                        <p className="text-slate-600">เอกสารนี้อาจถูกลบ ย้าย หรือไม่มีอยู่ในระบบ กรุณาตรวจสอบลิงก์อีกครั้ง</p>
+                        <p className="text-slate-600">เอกสารรหัส <span className="font-mono font-bold text-slate-900">{id}</span> อาจถูกลบ ย้าย หรือไม่มีอยู่ในระบบ กรุณาตรวจสอบลิงก์อีกครั้ง</p>
                     </div>
                     <Button 
                         onClick={() => window.location.href = 'https://lawslane.com'}

@@ -33,19 +33,56 @@ export interface InvoiceData {
 const COLLECTION_NAME = 'invoices';
 
 export const invoiceService = {
-    // Get an invoice by ID
+    // Get an invoice or contract by ID (or chatId as fallback)
     async getInvoice(id: string): Promise<InvoiceData | null> {
         const { firestore } = initializeFirebase();
         if (!firestore) throw new Error('Firestore not initialized');
 
-        const docRef = doc(firestore, COLLECTION_NAME, id);
-        const docSnap = await getDoc(docRef);
+        const collections = ['invoices', 'contracts'];
+        
+        // 1. Try fetching by Document ID in both collections
+        for (const collName of collections) {
+            const docRef = doc(firestore, collName, id);
+            const docSnap = await getDoc(docRef);
 
-        if (docSnap.exists()) {
-            return { id: docSnap.id, ...docSnap.data() } as InvoiceData;
-        } else {
-            return null;
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                return { 
+                    id: docSnap.id, 
+                    ...data,
+                    // Normalize status and type for contracts if found there
+                    status: data.status || 'pending',
+                    type: collName === 'invoices' ? (data.type || 'invoice') : 'contract'
+                } as InvoiceData;
+            }
         }
+
+        // 2. Fallback: Search by chatId or caseId in both collections
+        const { query, where, collection, getDocs, limit } = await import('firebase/firestore');
+        const searchFields = ['chatId', 'caseId', 'case_id', 'chat_id'];
+        
+        for (const collName of collections) {
+            for (const field of searchFields) {
+                const q = query(
+                    collection(firestore, collName),
+                    where(field, '==', id),
+                    limit(1)
+                );
+                const querySnap = await getDocs(q);
+                if (!querySnap.empty) {
+                    const foundDoc = querySnap.docs[0];
+                    const data = foundDoc.data();
+                    return { 
+                        id: foundDoc.id, 
+                        ...data,
+                        status: data.status || 'pending',
+                        type: collName === 'invoices' ? (data.type || 'invoice') : 'contract'
+                    } as InvoiceData;
+                }
+            }
+        }
+
+        return null;
     },
 
     // Real-time subscription
