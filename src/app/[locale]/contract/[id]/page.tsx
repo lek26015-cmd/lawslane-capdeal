@@ -44,7 +44,6 @@ import { generateContractPDF } from '@/lib/contract-pdf';
 import { useUser, initializeFirebase } from '@/firebase';
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useSubscription } from '@/hooks/useSubscription';
 import { uploadToR2 } from '@/app/actions/upload-r2';
 
 const getContractLabels = (category: string = 'other') => {
