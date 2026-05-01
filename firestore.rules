@@ -192,45 +192,27 @@ service cloud.firestore {
     }
 
     match /contracts/{contractId} {
-      function canAccessContract() {
-        let userDocPath = /databases/$(database)/documents/users/$(request.auth.uid);
-        let hasUserDoc = exists(userDocPath);
-        let userDoc = hasUserDoc ? get(userDocPath).data : {};
-        let userCompanyId = hasUserDoc ? userDoc.get('companyId', null) : null;
-        let resourceCompanyId = resource.data.get('companyId', null);
-        
-        return isSignedIn() && (
-          request.auth.uid == resource.data.ownerId ||
-          request.auth.uid == resource.data.userId ||
-          (resourceCompanyId != null && userCompanyId != null && resourceCompanyId == userCompanyId) ||
-          isAdmin()
-        );
-      }
+      allow get, list: if isSignedIn() && (
+        request.auth.uid == resource.data.get('ownerId', '') || 
+        request.auth.uid == resource.data.get('userId', '') || 
+        isAdmin()
+      );
+      
+      allow create: if isSignedIn() && (
+        request.resource.data.get('ownerId', '') == request.auth.uid || 
+        request.resource.data.get('userId', '') == request.auth.uid
+      );
 
-      function checkRoleImmutable(role) {
-        let oldRoleData = resource.data.get(role, {});
-        let newRoleData = request.resource.data.get(role, {});
-        
-        let oldPhone = oldRoleData.get('verifiedPhoneNumber', null);
-        let newPhone = newRoleData.get('verifiedPhoneNumber', null);
-        let phoneUnchanged = (oldPhone == null) || (oldPhone == newPhone);
+      allow update: if isSignedIn() && (
+        resource.data.get('ownerId', '') == request.auth.uid || 
+        resource.data.get('userId', '') == request.auth.uid || 
+        isAdmin()
+      );
 
-        let oldOtpTime = oldRoleData.get('otpVerificationTimestamp', null);
-        let newOtpTime = newRoleData.get('otpVerificationTimestamp', null);
-        let otpTimeUnchanged = (oldOtpTime == null) || (oldOtpTime == newOtpTime);
-
-        let oldAuthUid = oldRoleData.get('authUid', null);
-        let newAuthUid = newRoleData.get('authUid', null);
-        let authUidUnchanged = (oldAuthUid == null) || (oldAuthUid == newAuthUid);
-
-        return phoneUnchanged && otpTimeUnchanged && authUidUnchanged;
-      }
-
-      allow get: if canAccessContract();
-      allow list: if canAccessContract();
-      allow create: if isSignedIn() && (request.resource.data.ownerId == request.auth.uid || request.resource.data.userId == request.auth.uid);
-      allow update: if canAccessContract() && checkRoleImmutable('employer') && checkRoleImmutable('contractor');
-      allow delete: if isAdmin() || (isSignedIn() && (request.auth.uid == resource.data.ownerId || request.auth.uid == resource.data.userId));
+      allow delete: if isAdmin() || (isSignedIn() && (
+        resource.data.get('ownerId', '') == request.auth.uid || 
+        resource.data.get('userId', '') == request.auth.uid
+      ));
     }
 
     match /cap-deals/{dealId} {

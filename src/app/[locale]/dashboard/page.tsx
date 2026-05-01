@@ -49,32 +49,32 @@ export default function DashboardPage() {
                     const data = await getUserDashboardData(user.uid);
                     setTickets(data.tickets);
                     
-                    // Fetch contracts client-side for better reliability
-                    try {
-                        const userContracts = await contractService.getContractsByUser(user.uid);
-                        setCapDeals(userContracts.slice(0, 5));
-                    } catch (contractError) {
-                        console.error("Error fetching contracts client-side:", contractError);
-                        // Fallback to server data if client-side fails
-                        if (data.contracts) {
-                            setCapDeals(data.contracts);
-                        }
-                    }
-
                     if (data.profile) {
                         setProfile(data.profile);
                     }
+                    
+                    // Initially set from server data (most reliable via Admin SDK)
+                    setCapDeals(data.contracts || []);
+                    
+                    // Then try to fetch client-side for real-time updates
+                    try {
+                        const userContracts = await contractService.getContractsByUser(user.uid);
+                        if (userContracts && userContracts.length > 0) {
+                            setCapDeals(userContracts.slice(0, 5));
+                        }
+                    } catch (contractError) {
+                        console.error("Error fetching contracts client-side:", contractError);
+                    }
                 } catch (error) {
-                    console.error("Error fetching dashboard data:", error);
-                    setTickets([]);
-                    setCapDeals([]);
+                    console.error("Dashboard data fetch error:", error);
+                } finally {
+                    setIsLoading(false);
                 }
-
             } else {
                 setTickets([]);
                 setCapDeals([]);
+                setIsLoading(false);
             }
-            setIsLoading(false);
         }
         fetchData();
     }, [isUserLoading, user, router, locale]);
