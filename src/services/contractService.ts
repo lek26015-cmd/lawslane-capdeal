@@ -18,6 +18,9 @@ export interface ContractParty {
     address?: string;
     signature?: string; // Base64 or URL
     signedAt?: Timestamp;
+    verifiedPhoneNumber?: string;
+    otpVerificationTimestamp?: Timestamp;
+    authUid?: string;
 }
 
 export interface ContractData {
@@ -111,19 +114,27 @@ export const contractService = {
     },
 
     // Sign a contract
-    async signContract(id: string, role: 'employer' | 'contractor', signature: string) {
+    async signContract(id: string, role: 'employer' | 'contractor', signature: string, otpMetadata?: { verifiedPhoneNumber: string, authUid: string }) {
         const { firestore } = initializeFirebase();
         if (!firestore) throw new Error('Firestore not initialized');
 
         const docRef = doc(firestore, COLLECTION_NAME, id);
         const now = Timestamp.now();
 
-        // Update successful
-        await updateDoc(docRef, {
+        const updates: any = {
             [`${role}.signature`]: signature,
             [`${role}.signedAt`]: now,
             updatedAt: now
-        });
+        };
+
+        if (otpMetadata) {
+            updates[`${role}.verifiedPhoneNumber`] = otpMetadata.verifiedPhoneNumber;
+            updates[`${role}.otpVerificationTimestamp`] = now;
+            updates[`${role}.authUid`] = otpMetadata.authUid;
+        }
+
+        // Update successful
+        await updateDoc(docRef, updates);
 
         // Check if both signed to update status
         const currentDoc = await getDoc(docRef);

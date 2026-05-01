@@ -41,7 +41,9 @@ import { FileSignature, AlertTriangle, Shield, CheckCircle, Edit, Plus, Calendar
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { generateContractPDF } from '@/lib/contract-pdf';
-import { useUser } from '@/firebase';
+import { useUser, initializeFirebase } from '@/firebase';
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
+import { useSubscription } from '@/hooks/useSubscription';
 import { useSubscription } from '@/hooks/useSubscription';
 import { uploadToR2 } from '@/app/actions/upload-r2';
 
@@ -92,6 +94,14 @@ export default function ContractSigningPage() {
     const [pendingSignature, setPendingSignature] = useState<string | null>(null);
     const [showESignInfo, setShowESignInfo] = useState(false);
     
+    // OTP states
+    const [phoneNumber, setPhoneNumber] = useState('');
+    const [otpCode, setOtpCode] = useState('');
+    const [isSendingOtp, setIsSendingOtp] = useState(false);
+    const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+    const [showOtpInput, setShowOtpInput] = useState(false);
+    const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+    
     // Share Dialog states
     const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
     const [shareIsPinProtected, setShareIsPinProtected] = useState(true);
@@ -106,6 +116,18 @@ export default function ContractSigningPage() {
             setContract(data);
             setLoading(false);
         });
+
+        // Initialize RecaptchaVerifier
+        const { auth } = initializeFirebase();
+        if (auth && typeof window !== 'undefined' && !(window as any).recaptchaVerifier) {
+            try {
+                (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+                    size: 'invisible',
+                });
+            } catch (error) {
+                console.error("Recaptcha init error:", error);
+            }
+        }
 
         return () => unsubscribe();
     }, [id]);
@@ -251,17 +273,67 @@ export default function ContractSigningPage() {
         setShowConfirmSign(true);
     };
 
-    const handleConfirmSign = async () => {
-        if (!signingRole || !contract || !pendingSignature) return;
+    const formatPhoneNumber = (phone: string) => {
+        let formatted = phone.replace(/\D/g, '');
+        if (formatted.startsWith('0')) {
+            formatted = '+66' + formatted.substring(1);
+        } else if (!formatted.startsWith('+')) {
+            formatted = '+' + formatted;
+        }
+        return formatted;
+    };
 
+    const handleSendOtp = async () => {
+        if (!phoneNumber || phoneNumber.length < 9) {
+            alert("กรุณาระบุหมายเลขโทรศัพท์ที่ถูกต้อง");
+            return;
+        }
+
+        const { auth } = initializeFirebase();
+        if (!auth) return;
+
+        setIsSendingOtp(true);
         try {
-            await contractService.signContract(id, signingRole, pendingSignature);
+            const formattedPhone = formatPhoneNumber(phoneNumber);
+            const appVerifier = (window as any).recaptchaVerifier;
+            const confirmation = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
+            setConfirmationResult(confirmation);
+            setShowOtpInput(true);
+        } catch (error) {
+            console.error('Error sending OTP:', error);
+            alert("ไม่สามารถส่ง OTP ได้ กรุณาตรวจสอบหมายเลขโทรศัพท์และลองใหม่อีกครั้ง");
+        } finally {
+            setIsSendingOtp(false);
+        }
+    };
+
+    const handleVerifyOtpAndSign = async () => {
+        if (!confirmationResult || !otpCode || !signingRole || !contract || !pendingSignature) return;
+
+        setIsVerifyingOtp(true);
+        try {
+            const result = await confirmationResult.confirm(otpCode);
+            const user = result.user;
+
+            const otpMetadata = {
+                verifiedPhoneNumber: user.phoneNumber || formatPhoneNumber(phoneNumber),
+                authUid: user.uid,
+            };
+
+            await contractService.signContract(id, signingRole, pendingSignature, otpMetadata);
+            
             setIsDialogOpen(false);
             setShowConfirmSign(false);
             setPendingSignature(null);
+            setShowOtpInput(false);
+            setPhoneNumber('');
+            setOtpCode('');
+            setConfirmationResult(null);
         } catch (error) {
-            console.error('Error signing contract:', error);
-            alert("ไม่สามารถบันทึกลายเซ็นได้ กรุณาลองใหม่อีกครั้ง");
+            console.error('Error verifying OTP:', error);
+            alert("รหัส OTP ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง");
+        } finally {
+            setIsVerifyingOtp(false);
         }
     };
 
@@ -1193,22 +1265,84 @@ export default function ContractSigningPage() {
             </Dialog>
 
             {/* Confirmation Dialog for Signing */}
-            <AlertDialog open={showConfirmSign} onOpenChange={setShowConfirmSign}>
+            <AlertDialog open={showConfirmSign} onOpenChange={(open) => {
+                setShowConfirmSign(open);
+                if (!open) {
+                    setShowOtpInput(false);
+                    setOtpCode('');
+                    setPhoneNumber('');
+                }
+            }}>
                 <AlertDialogContent className="bg-white border-none shadow-2xl rounded-2xl">
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="text-xl font-bold text-slate-900">ยืนยันการเซ็นชื่อ</AlertDialogTitle>
+                        <AlertDialogTitle className="text-xl font-bold text-slate-900">ยืนยันการเซ็นชื่อด้วยเบอร์โทรศัพท์ (OTP)</AlertDialogTitle>
                         <AlertDialogDescription className="text-slate-600 text-base">
-                            ลายเซ็นนี้จะไม่สามารถแก้ไขได้อีกหลังจากกดยืนยัน คุณต้องการดำเนินการต่อใช่หรือไม่?
+                            {!showOtpInput ? 
+                                "กรุณาระบุหมายเลขโทรศัพท์เพื่อรับรหัส OTP ยืนยันตัวตนก่อนบันทึกลายเซ็น ลายเซ็นและเบอร์นี้จะไม่สามารถแก้ไขได้อีกหลังจากกดยืนยัน" :
+                                "กรุณากรอกรหัส OTP 6 หลักที่ได้รับทาง SMS"
+                            }
                         </AlertDialogDescription>
                     </AlertDialogHeader>
+                    
+                    <div className="py-4 space-y-4">
+                        {!showOtpInput ? (
+                            <div className="space-y-2">
+                                <Label>หมายเลขโทรศัพท์</Label>
+                                <Input 
+                                    placeholder="08X-XXX-XXXX" 
+                                    value={phoneNumber} 
+                                    onChange={(e) => setPhoneNumber(e.target.value)} 
+                                    disabled={isSendingOtp}
+                                />
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                <Label>รหัส OTP</Label>
+                                <Input 
+                                    placeholder="XXXXXX" 
+                                    maxLength={6}
+                                    value={otpCode} 
+                                    onChange={(e) => setOtpCode(e.target.value)} 
+                                    disabled={isVerifyingOtp}
+                                    className="text-center tracking-widest text-lg font-bold"
+                                />
+                            </div>
+                        )}
+                        <div id="recaptcha-container"></div>
+                    </div>
+
                     <AlertDialogFooter className="mt-6">
-                        <AlertDialogCancel className="rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50">ยกเลิก</AlertDialogCancel>
-                        <AlertDialogAction 
-                            onClick={handleConfirmSign}
-                            className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 shadow-lg shadow-blue-200"
+                        <AlertDialogCancel 
+                            className="rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50"
+                            onClick={() => {
+                                setShowOtpInput(false);
+                                setOtpCode('');
+                                setPhoneNumber('');
+                            }}
+                            disabled={isSendingOtp || isVerifyingOtp}
                         >
-                            ยืนยันและบันทึก
-                        </AlertDialogAction>
+                            ยกเลิก
+                        </AlertDialogCancel>
+                        
+                        {!showOtpInput ? (
+                            <Button 
+                                onClick={handleSendOtp}
+                                disabled={isSendingOtp || !phoneNumber}
+                                className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 shadow-lg shadow-blue-200"
+                            >
+                                {isSendingOtp ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                                รับรหัส OTP
+                            </Button>
+                        ) : (
+                            <Button 
+                                onClick={handleVerifyOtpAndSign}
+                                disabled={isVerifyingOtp || otpCode.length !== 6}
+                                className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 shadow-lg shadow-blue-200"
+                            >
+                                {isVerifyingOtp ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                                ยืนยัน OTP และบันทึก
+                            </Button>
+                        )}
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
@@ -1243,15 +1377,15 @@ export default function ContractSigningPage() {
                             <ul className="space-y-3">
                                 <li className="flex gap-3 text-slate-600">
                                     <div className="w-5 h-5 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">1</div>
-                                    <p><strong>การระบุตัวตน (Identity Verification):</strong> ผู้ลงนามต้องผ่านการยืนยันตัวตนผ่านระบบบัญชีผู้ใช้ที่ปลอดภัย</p>
+                                    <p><strong>การระบุตัวตนและห้ามปฏิเสธความรับผิด (KYC & Non-repudiation):</strong> การยืนยันด้วยเบอร์โทรศัพท์ผ่านระบบ OTP ผูกลายเซ็นเข้ากับอุปกรณ์สื่อสารส่วนบุคคล ทำให้คู่สัญญาไม่สามารถปฏิเสธว่าไม่ได้เป็นผู้ลงนามได้</p>
                                 </li>
                                 <li className="flex gap-3 text-slate-600">
                                     <div className="w-5 h-5 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">2</div>
-                                    <p><strong>บันทึกประวัติ (Audit Trail):</strong> ระบบบันทึกวันเวลา (Timestamp) และข้อมูลทางเทคนิคที่เกี่ยวข้องในขณะที่มีการลงนาม</p>
+                                    <p><strong>บันทึกประวัติ (Digital Audit Trail):</strong> ระบบบันทึกเบอร์โทรศัพท์ที่ใช้ยืนยัน วันเวลา (Timestamp) และข้อมูลทางเทคนิคเพื่อใช้เป็นพยานแวดล้อมที่น่าเชื่อถือในชั้นศาล</p>
                                 </li>
                                 <li className="flex gap-3 text-slate-600">
                                     <div className="w-5 h-5 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">3</div>
-                                    <p><strong>ความครบถ้วนของข้อมูล (Integrity):</strong> เมื่อมีการลงนามแล้ว เนื้อหาสัญญาจะไม่สามารถถูกแก้ไขฝ่ายเดียวได้โดยไม่มีการแจ้งเตือนหรือการสร้างฉบับแก้ไขใหม่ (Revision)</p>
+                                    <p><strong>ความเปลี่ยนแปลงไม่ได้ (Data Integrity):</strong> ข้อมูลการลงนามและ OTP ถูกล็อกทันทีหลังการเซ็นเสร็จสิ้น ป้องกันการดัดแปลงแก้ไข (Tamper-proof) ในภายหลัง</p>
                                 </li>
                             </ul>
                         </section>

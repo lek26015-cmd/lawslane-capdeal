@@ -206,10 +206,29 @@ service cloud.firestore {
         );
       }
 
+      function checkRoleImmutable(role) {
+        let oldRoleData = resource.data.get(role, {});
+        let newRoleData = request.resource.data.get(role, {});
+        
+        let oldPhone = oldRoleData.get('verifiedPhoneNumber', null);
+        let newPhone = newRoleData.get('verifiedPhoneNumber', null);
+        let phoneUnchanged = (oldPhone == null) || (oldPhone == newPhone);
+
+        let oldOtpTime = oldRoleData.get('otpVerificationTimestamp', null);
+        let newOtpTime = newRoleData.get('otpVerificationTimestamp', null);
+        let otpTimeUnchanged = (oldOtpTime == null) || (oldOtpTime == newOtpTime);
+
+        let oldAuthUid = oldRoleData.get('authUid', null);
+        let newAuthUid = newRoleData.get('authUid', null);
+        let authUidUnchanged = (oldAuthUid == null) || (oldAuthUid == newAuthUid);
+
+        return phoneUnchanged && otpTimeUnchanged && authUidUnchanged;
+      }
+
       allow get: if canAccessContract();
       allow list: if canAccessContract();
       allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update: if canAccessContract();
+      allow update: if canAccessContract() && checkRoleImmutable('employer') && checkRoleImmutable('contractor');
       allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerId);
     }
 
