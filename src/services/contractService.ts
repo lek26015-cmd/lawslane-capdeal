@@ -7,7 +7,10 @@ import {
     updateDoc,
     onSnapshot,
     serverTimestamp,
-    Timestamp
+    Timestamp,
+    query,
+    where,
+    getDocs
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -196,7 +199,6 @@ export const contractService = {
         const { firestore } = initializeFirebase();
         if (!firestore) throw new Error('Firestore not initialized');
 
-        const { query, where, getDocs } = await import('firebase/firestore');
         const q = query(
             collection(firestore, COLLECTION_NAME),
             where('companyId', '==', companyId)
@@ -207,8 +209,8 @@ export const contractService = {
 
         // Sort client-side to avoid requiring a composite index from the user
         return results.sort((a, b) => {
-            const timeA = a.createdAt?.toMillis?.() || 0;
-            const timeB = b.createdAt?.toMillis?.() || 0;
+            const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt instanceof Date ? a.createdAt.getTime() : 0);
+            const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt instanceof Date ? b.createdAt.getTime() : 0);
             return timeB - timeA;
         });
     },
@@ -218,7 +220,6 @@ export const contractService = {
         const { firestore } = initializeFirebase();
         if (!firestore) throw new Error('Firestore not initialized');
 
-        const { query, collection, where, getDocs } = await import('firebase/firestore');
         const q = query(
             collection(firestore, COLLECTION_NAME),
             where('ownerId', '==', userId)
@@ -235,8 +236,8 @@ export const contractService = {
 
         // Sort client-side to avoid requiring a composite index
         return results.sort((a, b) => {
-            const timeA = a.createdAt?.toMillis?.() || 0;
-            const timeB = b.createdAt?.toMillis?.() || 0;
+            const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt instanceof Date ? a.createdAt.getTime() : 0);
+            const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt instanceof Date ? b.createdAt.getTime() : 0);
             return timeB - timeA;
         });
     },
