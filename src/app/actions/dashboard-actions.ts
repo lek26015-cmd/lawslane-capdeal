@@ -29,45 +29,41 @@ export async function getUserDashboardData(userId: string) {
     });
 
     // Fetch Contracts from multiple possible collections and fields
-    const collectionsToSearch = ['contracts', 'cap-deals'];
-    const fieldsToSearch = ['ownerId', 'userId'];
-    
-    let allContractDocs: any[] = [];
-    const seenContractIds = new Set<string>();
+    let allContracts: any[] = [];
+    const seenIds = new Set<string>();
 
-    for (const colName of collectionsToSearch) {
-        const colRef = db.collection(colName);
-        for (const fieldName of fieldsToSearch) {
-            try {
-                const snap = await colRef.where(fieldName, '==', userId).get();
-                snap.docs.forEach(doc => {
-                    if (!seenContractIds.has(doc.id)) {
-                        seenContractIds.add(doc.id);
-                        allContractDocs.push(doc);
-                    }
+    try {
+        // Search 'contracts' collection
+        const c1 = await db.collection('contracts').where('ownerId', '==', userId).get();
+        const c2 = await db.collection('contracts').where('userId', '==', userId).get();
+        
+        // Search 'cap-deals' collection
+        const d1 = await db.collection('cap-deals').where('ownerId', '==', userId).get();
+        const d2 = await db.collection('cap-deals').where('userId', '==', userId).get();
+
+        const allDocs = [...c1.docs, ...c2.docs, ...d1.docs, ...d2.docs];
+        
+        allDocs.forEach(doc => {
+            if (!seenIds.has(doc.id)) {
+                seenIds.add(doc.id);
+                const data = doc.data();
+                allContracts.push({
+                    id: doc.id,
+                    ...data,
+                    createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate().toISOString() : 
+                               (data.createdAt ? new Date(data.createdAt).toISOString() : new Date().toISOString()),
+                    updatedAt: data.updatedAt instanceof admin.firestore.Timestamp ? data.updatedAt.toDate().toISOString() : 
+                               (data.updatedAt ? new Date(data.updatedAt).toISOString() : new Date().toISOString()),
                 });
-            } catch (e) {
-                console.warn(`Server search failed for ${colName}.${fieldName}:`, e);
             }
-        }
+        });
+    } catch (e) {
+        console.error("Server-side contract fetch failed:", e);
     }
 
-    const contracts = allContractDocs.map(d => {
-        const data = d.data();
-        // Convert all possible timestamps to strings
-        return {
-            id: d.id,
-            ...data,
-            createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate().toISOString() : 
-                       (data.createdAt ? new Date(data.createdAt).toISOString() : new Date().toISOString()),
-            updatedAt: data.updatedAt instanceof admin.firestore.Timestamp ? data.updatedAt.toDate().toISOString() : 
-                       (data.updatedAt ? (typeof data.updatedAt === 'string' ? data.updatedAt : new Date(data.updatedAt).toISOString()) : new Date().toISOString()),
-        };
-    });
-
     // Sort in memory to avoid requiring a composite index
-    contracts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    const finalContracts = contracts.slice(0, 5);
+    allContracts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const finalContracts = allContracts.slice(0, 5);
 
     // Fetch User Profile
     const userDoc = await db.collection('users').doc(userId).get();
