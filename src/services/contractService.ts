@@ -213,6 +213,34 @@ export const contractService = {
         });
     },
 
+    // Get contracts by user ID (client-side)
+    async getContractsByUser(userId: string): Promise<ContractData[]> {
+        const { firestore } = initializeFirebase();
+        if (!firestore) throw new Error('Firestore not initialized');
+
+        const { query, collection, where, getDocs } = await import('firebase/firestore');
+        const q = query(
+            collection(firestore, COLLECTION_NAME),
+            where('ownerId', '==', userId)
+        );
+
+        const querySnapshot = await getDocs(q);
+        const results = querySnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                ...data,
+                id: doc.id
+            } as ContractData;
+        });
+
+        // Sort client-side to avoid requiring a composite index
+        return results.sort((a, b) => {
+            const timeA = a.createdAt?.toMillis?.() || 0;
+            const timeB = b.createdAt?.toMillis?.() || 0;
+            return timeB - timeA;
+        });
+    },
+
     // Generate share link and update protection settings
     async generateShareLink(id: string, isPinProtected: boolean, sharePin?: string) {
         const { firestore } = initializeFirebase();

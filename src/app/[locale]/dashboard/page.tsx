@@ -16,6 +16,7 @@ import { useUser } from '@/firebase';
 import { getProblemTypeKey } from '@/lib/problem-types';
 import { useTranslations, useLocale } from 'next-intl';
 import { getUserDashboardData } from '@/app/actions/dashboard-actions';
+import { contractService } from '@/services/contractService';
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -47,10 +48,19 @@ export default function DashboardPage() {
                 try {
                     const data = await getUserDashboardData(user.uid);
                     setTickets(data.tickets);
-                    // Use contracts from the same dashboard data fetch
-                    if (data.contracts) {
-                        setCapDeals(data.contracts);
+                    
+                    // Fetch contracts client-side for better reliability
+                    try {
+                        const userContracts = await contractService.getContractsByUser(user.uid);
+                        setCapDeals(userContracts.slice(0, 5));
+                    } catch (contractError) {
+                        console.error("Error fetching contracts client-side:", contractError);
+                        // Fallback to server data if client-side fails
+                        if (data.contracts) {
+                            setCapDeals(data.contracts);
+                        }
                     }
+
                     if (data.profile) {
                         setProfile(data.profile);
                     }
