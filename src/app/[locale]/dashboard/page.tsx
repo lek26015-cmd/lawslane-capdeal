@@ -247,6 +247,36 @@ export default function DashboardPage() {
                         </Card>
                     </div>
                 </div>
+
+                {/* Debug Info (Only visible to admin/user for troubleshooting) */}
+                <div className="mt-12 pt-8 border-t border-slate-200 text-center">
+                    <div className="inline-flex flex-col items-center p-4 bg-white/50 backdrop-blur-sm rounded-2xl border border-slate-200 shadow-sm">
+                        <p className="text-[10px] font-mono text-slate-400">DEBUG SESSION INFO</p>
+                        <p className="text-xs font-mono text-slate-600 mt-1">UID: {user.uid}</p>
+                        <p className="text-xs font-mono text-slate-600">Contracts Found: {capDeals.length}</p>
+                        <p className="text-xs font-mono text-slate-600">Locale: {locale}</p>
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="mt-2 h-7 text-[10px] rounded-full hover:bg-slate-200"
+                            onClick={async () => {
+                                setIsLoading(true);
+                                try {
+                                    const data = await getUserDashboardData(user.uid);
+                                    setTickets(data.tickets);
+                                    const userContracts = await contractService.getContractsByUser(user.uid);
+                                    setCapDeals(userContracts);
+                                    alert(`Refresh Complete!\nUID: ${user.uid}\nContracts: ${userContracts.length}`);
+                                } catch (e: any) {
+                                    alert(`Error: ${e.message}`);
+                                }
+                                setIsLoading(false);
+                            }}
+                        >
+                            Force Refresh & Debug
+                        </Button>
+                    </div>
+                </div>
             </div>
         </div>
     );

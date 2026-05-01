@@ -9,7 +9,7 @@ export async function getUserDashboardData(userId: string) {
     if (!adminApp) {
         throw new Error('Firebase Admin not initialized');
     }
-    const db = admin.firestore();
+    const db = adminApp.firestore();
 
     // Fetch Tickets (Keep for support purposes)
     const ticketsRef = db.collection('tickets');
