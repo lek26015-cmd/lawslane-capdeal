@@ -67,7 +67,20 @@ export async function getUserDashboardData(userId: string) {
 
     // Fetch User Profile
     const userDoc = await db.collection('users').doc(userId).get();
-    const profile = userDoc.exists ? userDoc.data() : null;
+    let profile = null;
+    if (userDoc.exists) {
+        const rawProfile = userDoc.data() || {};
+        profile = {
+            ...rawProfile,
+            // Sanitize all possible timestamp fields in profile
+            updatedAt: rawProfile.updatedAt instanceof admin.firestore.Timestamp ? rawProfile.updatedAt.toDate().toISOString() : 
+                       (rawProfile.updatedAt && typeof rawProfile.updatedAt.toDate === 'function' ? rawProfile.updatedAt.toDate().toISOString() : rawProfile.updatedAt),
+            lastActive: rawProfile.lastActive instanceof admin.firestore.Timestamp ? rawProfile.lastActive.toDate().toISOString() : 
+                        (rawProfile.lastActive && typeof rawProfile.lastActive.toDate === 'function' ? rawProfile.lastActive.toDate().toISOString() : rawProfile.lastActive),
+            registeredAt: rawProfile.registeredAt instanceof admin.firestore.Timestamp ? rawProfile.registeredAt.toDate().toISOString() : 
+                          (rawProfile.registeredAt && typeof rawProfile.registeredAt.toDate === 'function' ? rawProfile.registeredAt.toDate().toISOString() : rawProfile.registeredAt),
+        };
+    }
 
     // Return empty arrays for cases and appointments as they are lawyer-specific
     return {
