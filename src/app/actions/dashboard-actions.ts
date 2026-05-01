@@ -30,9 +30,9 @@ export async function getUserDashboardData(userId: string) {
 
     // Fetch Contracts (Cap and Deal)
     const contractsRef = db.collection('contracts');
-    const contractSnap = await contractsRef.where('ownerId', '==', userId).orderBy('createdAt', 'desc').limit(5).get();
+    const contractSnap = await contractsRef.where('ownerId', '==', userId).get();
 
-    const contracts = contractSnap.docs.map(d => {
+    let contracts = contractSnap.docs.map(d => {
         const data = d.data();
         // Convert all possible timestamps to strings
         return {
@@ -43,6 +43,10 @@ export async function getUserDashboardData(userId: string) {
                        (data.updatedAt ? data.updatedAt : new Date().toISOString()),
         };
     });
+
+    // Sort in memory to avoid requiring a composite index
+    contracts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    contracts = contracts.slice(0, 5);
 
     // Fetch User Profile
     const userDoc = await db.collection('users').doc(userId).get();
