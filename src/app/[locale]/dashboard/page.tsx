@@ -262,18 +262,27 @@ export default function DashboardPage() {
                             onClick={async () => {
                                 setIsLoading(true);
                                 try {
+                                    const debugRes = await fetch(`/api/debug/contracts?userId=${user.uid}`);
+                                    const debugData = await debugRes.json();
+                                    
+                                    const contractsCount = (debugData.contracts?.length || 0) + (debugData.contractsUserId?.length || 0);
+                                    const dealsCount = debugData.capDeals?.length || 0;
+                                    
+                                    alert(`Admin Debug Results:\nUID: ${user.uid}\nUser in DB: ${debugData.userFound ? 'YES' : 'NO'}\nContracts Found: ${contractsCount}\nCap-Deals Found: ${dealsCount}\n\nCheck console for details.`);
+                                    console.log('Detailed Debug Data:', debugData);
+                                    
+                                    // Also trigger normal refresh
                                     const data = await getUserDashboardData(user.uid);
                                     setTickets(data.tickets);
                                     const userContracts = await contractService.getContractsByUser(user.uid);
                                     setCapDeals(userContracts);
-                                    alert(`Refresh Complete!\nUID: ${user.uid}\nContracts: ${userContracts.length}`);
                                 } catch (e: any) {
-                                    alert(`Error: ${e.message}`);
+                                    alert(`Debug Error: ${e.message}`);
                                 }
                                 setIsLoading(false);
                             }}
                         >
-                            Force Refresh & Debug
+                            Force Refresh & Admin Debug
                         </Button>
                     </div>
                 </div>
