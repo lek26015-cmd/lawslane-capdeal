@@ -28,25 +28,46 @@ export async function getUserDashboardData(userId: string) {
         } as any; // Cast to any to handle Date vs String in type
     });
 
-    // Fetch Contracts (Cap and Deal)
-    const contractsRef = db.collection('contracts');
-    const contractSnap = await contractsRef.where('ownerId', '==', userId).get();
+    // Fetch Contracts from multiple possible collections and fields
+    const collectionsToSearch = ['contracts', 'cap-deals'];
+    const fieldsToSearch = ['ownerId', 'userId'];
+    
+    let allContractDocs: any[] = [];
+    const seenContractIds = new Set<string>();
 
-    let contracts = contractSnap.docs.map(d => {
+    for (const colName of collectionsToSearch) {
+        const colRef = db.collection(colName);
+        for (const fieldName of fieldsToSearch) {
+            try {
+                const snap = await colRef.where(fieldName, '==', userId).get();
+                snap.docs.forEach(doc => {
+                    if (!seenContractIds.has(doc.id)) {
+                        seenContractIds.add(doc.id);
+                        allContractDocs.push(doc);
+                    }
+                });
+            } catch (e) {
+                console.warn(`Server search failed for ${colName}.${fieldName}:`, e);
+            }
+        }
+    }
+
+    const contracts = allContractDocs.map(d => {
         const data = d.data();
         // Convert all possible timestamps to strings
         return {
             id: d.id,
             ...data,
-            createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+            createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate().toISOString() : 
+                       (data.createdAt ? new Date(data.createdAt).toISOString() : new Date().toISOString()),
             updatedAt: data.updatedAt instanceof admin.firestore.Timestamp ? data.updatedAt.toDate().toISOString() : 
-                       (data.updatedAt ? data.updatedAt : new Date().toISOString()),
+                       (data.updatedAt ? (typeof data.updatedAt === 'string' ? data.updatedAt : new Date(data.updatedAt).toISOString()) : new Date().toISOString()),
         };
     });
 
     // Sort in memory to avoid requiring a composite index
     contracts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    contracts = contracts.slice(0, 5);
+    const finalContracts = contracts.slice(0, 5);
 
     // Fetch User Profile
     const userDoc = await db.collection('users').doc(userId).get();
@@ -57,7 +78,7 @@ export async function getUserDashboardData(userId: string) {
         cases: [] as Case[],
         appointments: [] as UpcomingAppointment[],
         tickets,
-        contracts,
+        contracts: finalContracts,
         profile
     };
 }

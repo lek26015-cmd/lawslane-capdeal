@@ -201,6 +201,7 @@ service cloud.firestore {
         
         return isSignedIn() && (
           request.auth.uid == resource.data.ownerId ||
+          request.auth.uid == resource.data.userId ||
           (resourceCompanyId != null && userCompanyId != null && resourceCompanyId == userCompanyId) ||
           isAdmin()
         );
@@ -227,9 +228,22 @@ service cloud.firestore {
 
       allow get: if canAccessContract();
       allow list: if canAccessContract();
-      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() && (request.resource.data.ownerId == request.auth.uid || request.resource.data.userId == request.auth.uid);
       allow update: if canAccessContract() && checkRoleImmutable('employer') && checkRoleImmutable('contractor');
-      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.ownerId);
+      allow delete: if isAdmin() || (isSignedIn() && (request.auth.uid == resource.data.ownerId || request.auth.uid == resource.data.userId));
+    }
+
+    match /cap-deals/{dealId} {
+      function canAccessDeal() {
+        return isSignedIn() && (
+          request.auth.uid == resource.data.ownerId ||
+          request.auth.uid == resource.data.userId ||
+          isAdmin()
+        );
+      }
+      allow get, list: if canAccessDeal();
+      allow create: if isSignedIn() && (request.resource.data.ownerId == request.auth.uid || request.resource.data.userId == request.auth.uid);
+      allow update, delete: if canAccessDeal();
     }
 
     match /compliance_events/{eventId} {
