@@ -220,22 +220,40 @@ export const contractService = {
         const { firestore } = initializeFirebase();
         if (!firestore) throw new Error('Firestore not initialized');
 
-        const q = query(
-            collection(firestore, COLLECTION_NAME),
-            where('ownerId', '==', userId)
-        );
+        const { query, collection, where, getDocs } = await import('firebase/firestore');
+        
+        // We will check multiple collections and field names just in case of inconsistencies
+        const collectionsToCheck = ['contracts', 'cap-deals'];
+        const fieldsToCheck = ['ownerId', 'userId'];
+        
+        let allResults: ContractData[] = [];
+        const seenIds = new Set<string>();
 
-        const querySnapshot = await getDocs(q);
-        const results = querySnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                ...data,
-                id: doc.id
-            } as ContractData;
-        });
+        for (const colName of collectionsToCheck) {
+            for (const fieldName of fieldsToCheck) {
+                try {
+                    const q = query(
+                        collection(firestore, colName),
+                        where(fieldName, '==', userId)
+                    );
+                    const querySnapshot = await getDocs(q);
+                    querySnapshot.docs.forEach(doc => {
+                        if (!seenIds.has(doc.id)) {
+                            seenIds.add(doc.id);
+                            allResults.push({
+                                ...doc.data(),
+                                id: doc.id
+                            } as ContractData);
+                        }
+                    });
+                } catch (e) {
+                    console.warn(`Query failed for ${colName}.${fieldName}:`, e);
+                }
+            }
+        }
 
         // Sort client-side to avoid requiring a composite index
-        return results.sort((a, b) => {
+        return allResults.sort((a, b) => {
             const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt instanceof Date ? a.createdAt.getTime() : 0);
             const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt instanceof Date ? b.createdAt.getTime() : 0);
             return timeB - timeA;
