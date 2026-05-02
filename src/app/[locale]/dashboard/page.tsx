@@ -252,44 +252,6 @@ export default function DashboardPage() {
                     </div>
                 </div>
 
-                {/* Debug Info (Only visible to admin/user for troubleshooting) */}
-                <div className="mt-12 pt-8 border-t border-slate-200 text-center">
-                    <div className="inline-flex flex-col items-center p-4 bg-white/50 backdrop-blur-sm rounded-2xl border border-slate-200 shadow-sm">
-                        <p className="text-[10px] font-mono text-slate-400">DEBUG SESSION INFO</p>
-                        <p className="text-xs font-mono text-slate-600 mt-1">UID: {user.uid}</p>
-                        <p className="text-xs font-mono text-slate-600">Contracts Found: {capDeals.length}</p>
-                        <p className="text-xs font-mono text-slate-600">Locale: {locale}</p>
-                        <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="mt-2 h-7 text-[10px] rounded-full hover:bg-slate-200"
-                            onClick={async () => {
-                                setIsLoading(true);
-                                try {
-                                    const debugRes = await fetch(`/api/debug/contracts?userId=${user.uid}`);
-                                    const debugData = await debugRes.json();
-                                    
-                                    const contractsCount = (debugData.contracts?.length || 0) + (debugData.contractsUserId?.length || 0);
-                                    const dealsCount = debugData.capDeals?.length || 0;
-                                    
-                                    alert(`Admin Debug Results:\nUID: ${user.uid}\nUser in DB: ${debugData.userFound ? 'YES' : 'NO'}\nContracts Found: ${contractsCount}\nCap-Deals Found: ${dealsCount}\n\nCheck console for details.`);
-                                    console.log('Detailed Debug Data:', debugData);
-                                    
-                                    // Also trigger normal refresh
-                                    const data = await getUserDashboardData(user.uid);
-                                    setTickets(data.tickets);
-                                    const userContracts = await contractService.getContractsByUser(user.uid);
-                                    setCapDeals(userContracts);
-                                } catch (e: any) {
-                                    alert(`Debug Error: ${e.message}`);
-                                }
-                                setIsLoading(false);
-                            }}
-                        >
-                            Force Refresh & Admin Debug
-                        </Button>
-                    </div>
-                </div>
             </div>
         </div>
     );
