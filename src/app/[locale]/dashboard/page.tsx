@@ -111,26 +111,30 @@ export default function DashboardPage() {
                             </CardHeader>
                             <CardContent>
                                 {capDeals.length > 0 ? (
-                                    <div className="space-y-3">
+                                    <div className="space-y-4">
                                         {capDeals.map((deal: any) => (
                                             <Link href={`/${locale}/contract/${deal.id}`} key={deal.id}>
-                                                <div className="flex items-center justify-between p-4 rounded-3xl bg-blue-50 border border-blue-100 hover:bg-blue-100/50 transition-colors">
+                                                <div className="group flex items-center justify-between p-5 rounded-[2rem] bg-white border border-blue-50 hover:border-blue-200 hover:shadow-md hover:bg-blue-50/30 transition-all duration-300">
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="font-semibold text-blue-900 truncate flex items-center gap-2">
-                                                            {deal.title || 'สัญญาจ้างทำของ'}
-                                                            <Badge variant="outline" className={`text-xs ${deal.status === 'signed' ? 'text-green-700 border-green-600 bg-green-50' :
-                                                                deal.status === 'draft' ? 'text-slate-600 border-slate-400 bg-slate-50' :
-                                                                    'text-blue-700 border-blue-600 bg-blue-50'
+                                                        <div className="flex items-center gap-3 mb-1">
+                                                            <p className="font-bold text-slate-900 truncate">
+                                                                {deal.title || 'สัญญาจ้างทำของ'}
+                                                            </p>
+                                                            <Badge variant="outline" className={`text-[10px] px-2 py-0 h-5 rounded-full border-none font-medium ${deal.status === 'signed' ? 'text-emerald-700 bg-emerald-50' :
+                                                                deal.status === 'draft' ? 'text-slate-600 bg-slate-100' :
+                                                                    'text-blue-700 bg-blue-50'
                                                                 }`}>
                                                                 {deal.status === 'signed' ? 'เซ็นแล้ว' : deal.status === 'draft' ? 'ร่าง' : deal.status === 'pending' ? 'อยากเซ็น' : deal.status}
                                                             </Badge>
-                                                        </p>
-                                                        <p className="text-sm text-blue-700 truncate">
-                                                            {deal.task ? `งาน: ${deal.task.substring(0, 50)}${deal.task.length > 50 ? '...' : ''}` : 'ไม่มีรายละเอียด'}
-                                                            {deal.price ? ` | ราคา: ${Number(deal.price).toLocaleString()} บาท` : ''}
+                                                        </div>
+                                                        <p className="text-sm text-slate-500 truncate flex items-center gap-2">
+                                                            <Briefcase className="w-3.5 h-3.5" />
+                                                            {deal.task ? `${deal.task.substring(0, 60)}${deal.task.length > 60 ? '...' : ''}` : 'ไม่มีรายละเอียด'}
+                                                            {deal.price ? <span className="text-slate-300">|</span> : ''}
+                                                            {deal.price ? <span className="font-semibold text-slate-700">{Number(deal.price).toLocaleString()} บาท</span> : ''}
                                                         </p>
                                                     </div>
-                                                    <Button size="sm" className="bg-foreground hover:bg-foreground/90 text-background rounded-full ml-3 shrink-0">ดูสัญญา</Button>
+                                                    <Button size="sm" className="bg-slate-900 hover:bg-slate-800 text-white rounded-full ml-4 px-6 h-10 group-hover:scale-105 transition-transform">ดูสัญญา</Button>
                                                 </div>
                                             </Link>
                                         ))}
