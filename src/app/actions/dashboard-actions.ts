@@ -47,13 +47,17 @@ export async function getUserDashboardData(userId: string) {
             if (!seenIds.has(doc.id)) {
                 seenIds.add(doc.id);
                 const data = doc.data();
+                
+                // ONLY extract fields we actually use in the UI to ensure serialization
                 allContracts.push({
                     id: doc.id,
-                    ...data,
+                    title: data.title || 'สัญญาจ้างทำของ',
+                    status: data.status || 'draft',
+                    price: data.price || 0,
+                    task: data.task || '',
                     createdAt: data.createdAt instanceof admin.firestore.Timestamp ? data.createdAt.toDate().toISOString() : 
-                               (data.createdAt ? new Date(data.createdAt).toISOString() : new Date().toISOString()),
-                    updatedAt: data.updatedAt instanceof admin.firestore.Timestamp ? data.updatedAt.toDate().toISOString() : 
-                               (data.updatedAt ? new Date(data.updatedAt).toISOString() : new Date().toISOString()),
+                               (data.createdAt && typeof data.createdAt.toDate === 'function' ? data.createdAt.toDate().toISOString() : 
+                               (data.createdAt ? new Date(data.createdAt).toISOString() : new Date().toISOString())),
                 });
             }
         });
@@ -70,22 +74,18 @@ export async function getUserDashboardData(userId: string) {
     let profile = null;
     if (userDoc.exists) {
         const rawProfile = userDoc.data() || {};
+        // ONLY extract fields we actually use in the UI
         profile = {
-            ...rawProfile,
-            // Sanitize all possible timestamp fields in profile
-            updatedAt: rawProfile.updatedAt instanceof admin.firestore.Timestamp ? rawProfile.updatedAt.toDate().toISOString() : 
-                       (rawProfile.updatedAt && typeof rawProfile.updatedAt.toDate === 'function' ? rawProfile.updatedAt.toDate().toISOString() : rawProfile.updatedAt),
-            lastActive: rawProfile.lastActive instanceof admin.firestore.Timestamp ? rawProfile.lastActive.toDate().toISOString() : 
-                        (rawProfile.lastActive && typeof rawProfile.lastActive.toDate === 'function' ? rawProfile.lastActive.toDate().toISOString() : rawProfile.lastActive),
-            registeredAt: rawProfile.registeredAt instanceof admin.firestore.Timestamp ? rawProfile.registeredAt.toDate().toISOString() : 
-                          (rawProfile.registeredAt && typeof rawProfile.registeredAt.toDate === 'function' ? rawProfile.registeredAt.toDate().toISOString() : rawProfile.registeredAt),
+            name: rawProfile.name || '',
+            avatar: rawProfile.avatar || '',
+            email: rawProfile.email || '',
         };
     }
 
     // Return empty arrays for cases and appointments as they are lawyer-specific
     return {
-        cases: [] as Case[],
-        appointments: [] as UpcomingAppointment[],
+        cases: [],
+        appointments: [],
         tickets,
         contracts: finalContracts,
         profile
