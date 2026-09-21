@@ -57,10 +57,9 @@ function CheckoutContent() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                // server ดึง uid และอีเมลจาก session เอง — ห้ามให้ client กำหนดว่าใครได้แพลน
                 body: JSON.stringify({
                     planId,
-                    userId: user.uid,
-                    customerEmail: user.email || undefined,
                     billingInterval,
                 }),
             });

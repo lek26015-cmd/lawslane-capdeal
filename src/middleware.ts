@@ -13,66 +13,47 @@ export default async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const hostname = request.headers.get('host');
 
-    // 0. Subdomain Routing (business.lawslane.com -> /dashboard/b2b)
-    if (hostname) {
-        if (hostname.startsWith('business.')) {
-            // Check for both session and session_hint for extra robustness in dev
-            // session_hint from Client helps skip redirects during auto-sync
-            const hasSession = request.cookies.has('session') ||
-                (process.env.NODE_ENV !== 'production' && request.cookies.has('session_hint') && (hostname.includes('localhost') || hostname.includes('127.0.0.1')));
-
-            const isDashboardRoute = (pathname.includes('/dashboard') || pathname.includes('/clm')) &&
-                !pathname.includes('/login') &&
-                !pathname.includes('/signup');
-
-            if (process.env.NODE_ENV !== 'production') {
-                console.log(`[Middleware B2B] hostname: ${hostname}, pathname: ${pathname}, hasSession: ${hasSession}, isDashboardRoute: ${isDashboardRoute}`);
-            }
-
-            if (isDashboardRoute && !hasSession) {
-                const isLocal = hostname.includes('localhost') || hostname.includes('127.0.0.1');
-
-                // DIAGNOSTIC: In development, let it pass to see if client-side auth works
-                if (process.env.NODE_ENV !== 'production' && isLocal) {
-                    console.log('--- B2B AUTH BYPASS (DEV) ACTIVATED ---');
-                } else {
-                    const localeMatch = pathname.match(/^\/(th|en|zh)(\/|$)/);
-                    const locale = localeMatch ? localeMatch[1] : 'th';
-
-                    const searchParams = new URLSearchParams();
-                    searchParams.set('redirect', request.url);
-
-                    return NextResponse.redirect(new URL(`/${locale}/login?${searchParams.toString()}`, request.url));
-                }
-            }
-
-            // Business subdomain maps to Coming Soon page on production
-            const localeMatch = pathname.match(/^\/(th|en|zh)(\/|$)/);
-            const locale = localeMatch ? localeMatch[1] : 'th';
-
-            // Rewrite all business subdomain requests to the beautiful coming-soon page
-            const newPath = `/${locale}/coming-soon`;
-            return NextResponse.rewrite(new URL(newPath, request.url));
-
-            // For other paths, try to serve them directly or default to dashboard
-            // But we already handled the main ones.
-        }
+    // 0. Subdomain Routing — business.* ถูกปลดระวางแล้ว ชี้ไปหน้า coming-soon
+    //    (เดิมมีตรรกะเช็ค session อยู่เหนือบรรทัด rewrite แต่เป็น dead code ทั้งก้อน
+    //     เพราะ rewrite ทำงานทุกกรณีอยู่ดี — รวมถึง "B2B AUTH BYPASS (DEV)" ที่ถูกลบแล้ว)
+    if (hostname?.startsWith('business.')) {
+        const localeMatch = pathname.match(/^\/(th|en|zh)(\/|$)/);
+        const locale = localeMatch ? localeMatch[1] : 'th';
+        return NextResponse.rewrite(new URL(`/${locale}/coming-soon`, request.url));
     }
 
-    // Redirect /dashboard/b2b or /b2b on main domain to subdomains
-    if (hostname && !hostname.startsWith('business.')) {
-        if (pathname.includes('/dashboard/b2b') || pathname.match(/^\/(th|en|zh)?\/b2b/)) {
-            const localeMatch = pathname.match(/^\/(th|en|zh)(\/|$)/);
-            const locale = localeMatch ? localeMatch[1] : 'th';
-            return NextResponse.redirect(new URL(`/${locale}/coming-soon`, request.url));
-        }
+    // 1. /dashboard/b2b และ /b2b บนโดเมนหลัก -> coming-soon
+    //    ต้องมาก่อนการเช็ค session ด้านล่าง เพราะ path มีคำว่า /dashboard อยู่ด้วย
+    if (pathname.includes('/dashboard/b2b') || pathname.match(/^\/(th|en|zh)?\/b2b/)) {
+        const localeMatch = pathname.match(/^\/(th|en|zh)(\/|$)/);
+        const locale = localeMatch ? localeMatch[1] : 'th';
+        return NextResponse.redirect(new URL(`/${locale}/coming-soon`, request.url));
     }
 
-    // 2. Internationalization Middleware
+    // 2. กันหน้าที่ต้องล็อกอินบนโดเมน capdeal เอง
+    //    ⚠️ นี่เป็นแค่ UX redirect ไม่ใช่ด่านความปลอดภัย — middleware รันบน Edge
+    //    จึง verify Firebase session cookie ไม่ได้ (ต้องใช้ Admin SDK)
+    //    ด่านจริงอยู่ที่ requireUser() ใน API route และ server action ทุกตัว
+    const protectedPaths = ['/dashboard', '/clm', '/admin', '/account'];
+    const isProtected = protectedPaths.some((p) => pathname.includes(p))
+        && !pathname.includes('/login')
+        && !pathname.includes('/signup');
+
+    if (isProtected && !request.cookies.has('session')) {
+        const localeMatch = pathname.match(/^\/(th|en|zh)(\/|$)/);
+        const locale = localeMatch ? localeMatch[1] : 'th';
+        const searchParams = new URLSearchParams();
+        searchParams.set('redirect', pathname);
+        return NextResponse.redirect(new URL(`/${locale}/login?${searchParams.toString()}`, request.url));
+    }
+
+    // 3. Internationalization Middleware
     const response = intlMiddleware(request);
 
     // Add Security Headers
-    response.headers.set('Cross-Origin-Opener-Policy', 'unsafe-none');
+    // same-origin-allow-popups ยังให้ signInWithPopup ของ Firebase ทำงานได้
+    // แต่ไม่เปิดช่องให้หน้าต่างอื่นอ้างอิงถึงกันแบบ unsafe-none
+    response.headers.set('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
 
     return response;
 }

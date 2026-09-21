@@ -1,17 +1,21 @@
 import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { initAdmin } from '@/lib/firebase-admin';
+import { requireUser, authErrorResponse } from '@/lib/auth-guard';
 
 /**
  * Fetch the user's default payment method from Stripe
  */
 export async function POST(req: Request) {
+    // เดิมรับ { userId } จาก body → คืน brand/last4/วันหมดอายุของบัตรคนอื่นได้
+    let userId: string;
     try {
-        const { userId } = await req.json();
+        ({ uid: userId } = await requireUser());
+    } catch (e) {
+        return authErrorResponse(e);
+    }
 
-        if (!userId) {
-            return NextResponse.json({ paymentMethod: null });
-        }
+    try {
 
         const adminApp = await initAdmin();
         if (!adminApp) {

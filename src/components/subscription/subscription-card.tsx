@@ -25,10 +25,11 @@ export function SubscriptionCard() {
 
         try {
             setIsPortalLoading(true);
+            // server ดึง uid จาก session เอง ไม่ต้องส่ง userId มา
             const response = await fetch('/api/portal', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.uid }),
+                body: JSON.stringify({}),
             });
 
             const contentType = response.headers.get('content-type');
@@ -58,10 +59,11 @@ export function SubscriptionCard() {
 
             // Non-subscribers: use setup intent flow
             setIsSetupLoading(true);
+            // server ดึง uid และอีเมลจาก session เอง
             const response = await fetch('/api/setup-intent', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.uid, email: user.email }),
+                body: JSON.stringify({}),
             });
 
             const contentType = response.headers.get('content-type');

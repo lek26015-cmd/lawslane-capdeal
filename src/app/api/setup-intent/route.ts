@@ -1,14 +1,27 @@
 import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { initAdmin } from '@/lib/firebase-admin';
+import { requireUser, authErrorResponse, safeOrigin } from '@/lib/auth-guard';
 
 export async function POST(req: Request) {
+    // เดิมรับ { userId, email } จาก body → สร้าง Stripe customer แล้วเขียนทับ
+    // users/{userId}.subscription.customerId ของคนอื่นได้
+    // uid และอีเมลต้องมาจาก token ที่ตรวจแล้วเท่านั้น
+    let userId: string;
+    let email: string | undefined;
     try {
-        const { userId, email } = await req.json();
+        const session = await requireUser();
+        userId = session.uid;
+        email = session.token.email;
+    } catch (e) {
+        return authErrorResponse(e);
+    }
 
-        if (!userId || !email) {
-            return new NextResponse('User ID and email are required', { status: 400 });
-        }
+    if (!email) {
+        return new NextResponse('Account has no email address', { status: 400 });
+    }
+
+    try {
 
         const adminApp = await initAdmin();
         if (!adminApp) {
@@ -37,7 +50,7 @@ export async function POST(req: Request) {
         }
 
         // Create a Checkout Session in "setup" mode to collect payment method
-        const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const origin = safeOrigin(req.headers.get('origin'));
 
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],

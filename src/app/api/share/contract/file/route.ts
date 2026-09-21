@@ -12,10 +12,8 @@ const s3Client = new S3Client({
     },
 });
 
-export async function GET(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
+// route นี้ไม่มี dynamic segment [id] — เดิมประกาศ params ผิด ทำให้ type ไม่ผ่าน
+export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const contractId = searchParams.get('contractId');
     const fileUrl = searchParams.get('fileUrl');
@@ -33,18 +31,36 @@ export async function GET(
             return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
         }
 
-        // 2. Security Check
+        // 2. Security Check — เทียบ PIN แบบ constant-time
         if (contractData.isPinProtected) {
-            if (!pin || pin !== contractData.sharePin) {
+            const expected = contractData.sharePin ?? '';
+            const a = Buffer.from(pin ?? '');
+            const b = Buffer.from(expected);
+            const { timingSafeEqual } = await import('crypto');
+            if (!pin || a.length !== b.length || !timingSafeEqual(a, b)) {
                 return NextResponse.json({ error: 'Invalid or missing PIN' }, { status: 403 });
             }
         }
 
-        // 3. Proxy the file from R2
-        // Extract key from full URL (assuming it points to R2 public URL or contains the key)
-        // Example: https://pub-xxx.r2.dev/contracts/id/attachments/file.pdf
-        const urlParts = fileUrl.split('/');
-        const key = urlParts.slice(3).join('/'); // Get everything after domain
+        // 3. fileUrl ต้องเป็นไฟล์แนบของสัญญาใบนี้จริงเท่านั้น
+        //    เดิมเอา fileUrl ที่ผู้เรียกส่งมาแปลงเป็น R2 key ตรงๆ โดยไม่ตรวจว่าเป็นของใคร
+        //    → หาสัญญาที่ไม่ได้ตั้ง PIN สักใบ แล้วอ่าน object ไหนก็ได้ในทั้ง bucket
+        const attachments: Array<{ url?: string }> = contractData.attachments ?? [];
+        const matched = attachments.find((a) => a?.url === fileUrl);
+        if (!matched?.url) {
+            return NextResponse.json({ error: 'File not found for this contract' }, { status: 404 });
+        }
+
+        // 4. Proxy the file from R2 — key มาจาก URL ที่ผ่านการยืนยันแล้ว
+        let key: string;
+        try {
+            key = new URL(matched.url).pathname.replace(/^\/+/, '');
+        } catch {
+            return NextResponse.json({ error: 'File not found for this contract' }, { status: 404 });
+        }
+        if (!key) {
+            return NextResponse.json({ error: 'File not found for this contract' }, { status: 404 });
+        }
 
         const command = new GetObjectCommand({
             Bucket: process.env.R2_BUCKET_NAME,
@@ -60,10 +76,10 @@ export async function GET(
         // Convert stream to Buffer/Uint8Array for response
         const data = await Body.transformToByteArray();
 
-        return new NextResponse(data, {
+        return new NextResponse(Buffer.from(data), {
             headers: {
                 'Content-Type': ContentType || 'application/octet-stream',
-                'Cache-Control': 'public, max-age=3600',
+                'Cache-Control': 'private, no-store',
             },
         });
 

@@ -3,12 +3,12 @@
 import { initAdmin } from '@/lib/firebase-admin';
 import type { Case, UpcomingAppointment, ReportedTicket } from '@/lib/types';
 import * as admin from 'firebase-admin';
+import { requireUser } from '@/lib/auth-guard';
 
-export async function getUserDashboardData(userId: string) {
-    const adminApp = await initAdmin();
-    if (!adminApp) {
-        throw new Error('Firebase Admin not initialized');
-    }
+export async function getUserDashboardData() {
+    // เดิมรับ userId เป็น argument แล้วเชื่อเลย ทั้งที่ใช้ Admin SDK (ข้าม Firestore rules)
+    // → ใครก็ดึง dashboard ของคนอื่นได้ ตอนนี้ยึด uid จาก session เท่านั้น
+    const { uid: userId, adminApp } = await requireUser();
     const db = adminApp.firestore();
 
     // Fetch Tickets (Keep for support purposes)

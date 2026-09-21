@@ -54,16 +54,39 @@ export async function POST(request: Request) {
         });
 
         // 3. Centralized Role Detection and Redirection Logic
+        // Matches Lawslane/'s own session route (custom claims → lawyerProfiles →
+        // users.role), so role_hint is consistent regardless of which app a user
+        // signs in on. Previously this only checked users.role and never set
+        // role_hint at all — a lawyer signing in here gets redirected to
+        // lawslane.com/lawyer-dashboard below, but Lawslane's middleware would see
+        // no role_hint cookie, default to 'customer', and bounce them right back
+        // to /dashboard. See LAWSLANE-PLAN-01 3.0.
         let role = 'customer';
         try {
             const db = admin.firestore();
-            const userDoc = await db.collection('users').doc(decodedToken.uid).get();
-            if (userDoc.exists) {
-                role = userDoc.data()?.role || 'customer';
+            if (decodedToken.admin === true) {
+                role = 'admin';
+            } else if (decodedToken.lawyer === true) {
+                role = 'lawyer';
+            } else {
+                const lawyerDoc = await db.collection('lawyerProfiles').doc(decodedToken.uid).get();
+                if (lawyerDoc.exists) {
+                    role = 'lawyer';
+                } else {
+                    const userDoc = await db.collection('users').doc(decodedToken.uid).get();
+                    if (userDoc.exists) {
+                        role = userDoc.data()?.role || 'customer';
+                    }
+                }
             }
         } catch (dbErr) {
             console.error('Error fetching user role from Firestore:', dbErr);
         }
+
+        cookieStore.set('role_hint', role, {
+            ...cookieOptions,
+            httpOnly: false,
+        });
 
         // Calculate a safe suggested redirect
         let suggestedRedirect = requestedRedirect || '/dashboard';
@@ -143,6 +166,7 @@ export async function DELETE() {
 
         cookieStore.delete({ name: 'session', ...cookieOptions });
         cookieStore.delete({ name: 'session_hint', ...cookieOptions });
+        cookieStore.delete({ name: 'role_hint', ...cookieOptions });
 
         return NextResponse.json({ success: true });
     } catch (error) {

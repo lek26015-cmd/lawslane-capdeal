@@ -46,7 +46,7 @@ export default function DashboardPage() {
             setIsLoading(true);
             if (user?.uid) {
                 try {
-                    const data = await getUserDashboardData(user.uid);
+                    const data = await getUserDashboardData();
                     setTickets(data.tickets);
                     
                     if (data.profile) {

@@ -1,14 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { SUBSCRIPTION_PLANS, PlanId } from '@/lib/subscription';
+import { requireUser, authErrorResponse, safeOrigin } from '@/lib/auth-guard';
 
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json().catch(() => ({}));
-        const { planId, userId, customerEmail, billingInterval } = body;
+        const { planId, billingInterval } = body;
 
-        if (!planId || !userId) {
-            return NextResponse.json({ error: 'Plan ID and User ID are required' }, { status: 400 });
+        // userId/customerEmail ต้องมาจาก session ที่ตรวจแล้ว — เดิมรับจาก body
+        // แล้วใส่ลง metadata.userId ซึ่ง webhook เอาไปให้สิทธิ์แพลนตาม uid นั้น
+        let userId: string;
+        let customerEmail: string | undefined;
+        try {
+            const session = await requireUser();
+            userId = session.uid;
+            customerEmail = session.token.email;
+        } catch (e) {
+            return authErrorResponse(e);
+        }
+
+        if (!planId) {
+            return NextResponse.json({ error: 'Plan ID is required' }, { status: 400 });
         }
 
         const plan = SUBSCRIPTION_PLANS[planId as PlanId];
@@ -23,19 +36,12 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: `Missing Stripe Price ID for ${billingInterval} interval on plan ${plan.name}` }, { status: 400 });
         }
 
-        const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-
-        const sk = process.env.STRIPE_SECRET_KEY || '';
-        console.log('Stripe Key Check:', {
-            length: sk.length,
-            prefix: sk.substring(0, 10),
-            suffix: sk.substring(sk.length - 4)
-        });
+        const origin = safeOrigin(req.headers.get('origin'));
 
         const mode = 'subscription'; // Force subscription for all plans for now, or revert to conditional if needed
         const paymentMethods = mode === 'subscription' ? ['card'] : ['card', 'promptpay'];
 
-        console.log('Creating Stripe embedded session for:', { planId, userId, customerEmail, billingInterval, priceId });
+        console.log('Creating Stripe embedded session for:', { planId, billingInterval, priceId });
 
         const sessionParams: any = {
             ui_mode: 'embedded',

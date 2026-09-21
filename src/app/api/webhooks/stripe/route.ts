@@ -20,6 +20,25 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Webhook Error' }, { status: 400 });
     }
 
+    // กัน replay: Stripe ส่ง event ซ้ำได้ตามปกติ (retry) และ event ที่เคยประมวลผลแล้ว
+    // ต้องไม่ถูกทำซ้ำ — ใช้ create() ซึ่งจะ throw ถ้า document มีอยู่แล้ว
+    try {
+        const adminApp = await initAdmin();
+        if (adminApp) {
+            try {
+                await adminApp.firestore().collection('stripe_events').doc(event.id).create({
+                    type: event.type,
+                    receivedAt: new Date(),
+                });
+            } catch {
+                console.log(`Stripe event ${event.id} already processed — skipping`);
+                return NextResponse.json({ received: true, duplicate: true });
+            }
+        }
+    } catch (err) {
+        console.error('Failed to record stripe event for idempotency', err);
+    }
+
     try {
         switch (event.type) {
             case 'checkout.session.completed': {
@@ -63,6 +82,13 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         return;
     }
 
+    // ต้องจ่ายเงินสำเร็จจริงก่อนถึงให้สิทธิ์แพลน
+    // (โหมด subscription ที่เป็น trial จะเป็น 'no_payment_required' ซึ่งถือว่าผ่าน)
+    if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') {
+        console.warn(`Checkout session ${session.id} is not paid (${session.payment_status}) — skipping`);
+        return;
+    }
+
     const adminApp = await initAdmin();
     if (!adminApp) return;
     const adminDb = adminApp.firestore();
@@ -86,7 +112,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     await userRef.set({
         subscription: {
             planId: planId,
-            status: 'active', // For one-time payments, we assume active if payment is successful
+            status: 'active', // ผ่านการตรวจ payment_status มาแล้วด้านบน
             currentPeriodEnd: currentPeriodEnd,
             customerId: customerId,
             subscriptionId: subscriptionId || null,

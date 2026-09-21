@@ -1,16 +1,21 @@
 import { NextResponse } from 'next/server';
 import { initAdmin } from '@/lib/firebase-admin';
+import { requireUser, authErrorResponse } from '@/lib/auth-guard';
 
 /**
  * Fetch cap deal contracts for a user using firebase-admin (bypasses security rules)
  */
 export async function POST(req: Request) {
+    // route นี้ใช้ Admin SDK ซึ่งข้าม Firestore rules (ตาม comment ด้านบน)
+    // จึงต้องยึด uid จาก session ที่ตรวจแล้ว ไม่ใช่ค่าที่ client ส่งมา
+    let userId: string;
     try {
-        const { userId } = await req.json();
+        ({ uid: userId } = await requireUser());
+    } catch (e) {
+        return authErrorResponse(e);
+    }
 
-        if (!userId) {
-            return NextResponse.json({ capDeals: [] });
-        }
+    try {
 
         const adminApp = await initAdmin();
         if (!adminApp) {
