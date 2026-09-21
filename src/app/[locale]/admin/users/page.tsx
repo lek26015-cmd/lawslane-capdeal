@@ -52,7 +52,7 @@ export default function AdminUsersPage() {
             }
         } catch (error) {
             console.error('Failed to fetch users:', error);
-            toast.error('Failed to load users');
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to load users' });
         } finally {
             setIsLoading(false);
         }

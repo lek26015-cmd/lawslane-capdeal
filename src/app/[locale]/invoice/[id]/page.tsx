@@ -7,7 +7,7 @@ import { FadeIn } from '@/components/fade-in';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Download, FileText, CheckCircle, Clock, AlertTriangle, ArrowLeft, Printer } from 'lucide-react';
+import { Loader2, Download, FileText, CheckCircle, Clock, AlertTriangle, ArrowLeft, Printer, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { initializeFirebase } from '@/firebase';
