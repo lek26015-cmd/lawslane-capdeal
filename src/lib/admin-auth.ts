@@ -24,7 +24,10 @@ export async function verifyAdmin() {
 
         // Check for admin role (consistent with AdminLayout)
         const isSuperUser = decodedToken.uid === 'N5ehLbkYXbQQLX5KEuwJbeL3cXO2' || decodedToken.uid === 'wS9w7ysNYUajNsBYZ6C7n2Afe9H3';
-        const isAdmin = isSuperUser || decodedToken.email === 'lek.26015@gmail.com' || decodedToken.role === 'admin';
+        // รับ claim `admin` ด้วย — บัญชีแอดมินจริงบางคนมี { admin: true } แต่ไม่มี `role`
+        // จึงเคยหลุดด่านนี้ทั้งที่เป็นแอดมิน (ให้ตรงกับ tokenGrantsAdmin ใน Lawslane/)
+        const isAdmin = isSuperUser || decodedToken.admin === true
+            || decodedToken.email === 'lek.26015@gmail.com' || decodedToken.role === 'admin';
 
         if (!isAdmin) {
             return { error: 'Forbidden: Admin access required', status: 403 };

@@ -10,7 +10,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useFirebase, useUser } from '@/firebase';
-import { collection, query, where, getDocs, doc, updateDoc, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { approveDealPayment, rejectDealPayment } from '@/app/actions/finance-actions';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -111,62 +112,31 @@ export default function AdminFinancePage() {
     };
 
     const handleApprove = async (deal: PendingDeal) => {
-        if (!firestore) return;
-        try {
-            await updateDoc(doc(firestore, 'cap-deals', deal.id), {
-                status: 'active',
-                paymentApprovedAt: serverTimestamp()
-            });
-            
-            toast({ title: 'อนุมัติเรียบร้อย', description: 'ดีลนี้เปลี่ยนสถานะเป็น Active แล้ว' });
-            
-            // Notify Owner
-            await addDoc(collection(firestore, 'notifications'), {
-                type: 'payment_approved',
-                title: 'ยืนยันการชำระเงินสำเร็จ',
-                message: `ดีล "${deal.title}" ของคุณได้รับการตรวจสอบแล้ว`,
-                createdAt: serverTimestamp(),
-                read: false,
-                recipient: deal.ownerId,
-                link: `/contract/${deal.id}`
-            });
-            
-            fetchPendingDeals();
-            setIsVerifierOpen(false);
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'เกิดข้อผิดพลาด', description: 'ไม่สามารถอนุมัติได้' });
+        // ผ่าน server action ที่ตรวจสิทธิ์แอดมินและเขียนด้วย Admin SDK
+        // (เดิม updateDoc จากเบราว์เซอร์ ซึ่ง production ปฏิเสธเพราะไม่มีกฎ cap-deals
+        //  และต่อให้เพิ่มกฎ การให้ client เขียน status การเงินเองก็ไม่ปลอดภัย)
+        const res = await approveDealPayment(deal.id);
+        if (!res.ok) {
+            toast({ variant: 'destructive', title: 'เกิดข้อผิดพลาด', description: res.error });
+            return;
         }
+        toast({ title: 'อนุมัติเรียบร้อย', description: 'ดีลนี้เปลี่ยนสถานะเป็น Active แล้ว' });
+        fetchPendingDeals();
+        setIsVerifierOpen(false);
     };
 
     const handleReject = async () => {
-        if (!firestore || !selectedDeal || !rejectReason) return;
-        try {
-            await updateDoc(doc(firestore, 'cap-deals', selectedDeal.id), {
-                status: 'pending_payment',
-                rejectReason: rejectReason,
-                hasNewPayment: false
-            });
-
-            toast({ title: 'ปฏิเสธรายการแล้ว', description: 'แจ้งเหตุผลให้ลูกค้าเรียบร้อยแล้ว' });
-
-            // Notify Owner
-            await addDoc(collection(firestore, 'notifications'), {
-                type: 'payment_rejected',
-                title: 'การชำระเงินถูกปฏิเสธ',
-                message: `สลิปสำหรับดีล "${selectedDeal.title}" ถูกปฏิเสธ: ${rejectReason}`,
-                createdAt: serverTimestamp(),
-                read: false,
-                recipient: selectedDeal.ownerId,
-                link: `/payment?chatId=${selectedDeal.id}&type=additional` // Adjust link as needed
-            });
-
-            setIsRejectDialogOpen(false);
-            setIsVerifierOpen(false);
-            setRejectReason('');
-            fetchPendingDeals();
-        } catch (error) {
-            toast({ variant: 'destructive', title: 'เกิดข้อผิดพลาด', description: 'ไม่สามารถดำเนินการได้' });
+        if (!selectedDeal || !rejectReason) return;
+        const res = await rejectDealPayment(selectedDeal.id, rejectReason);
+        if (!res.ok) {
+            toast({ variant: 'destructive', title: 'เกิดข้อผิดพลาด', description: res.error });
+            return;
         }
+        toast({ title: 'ปฏิเสธรายการแล้ว', description: 'แจ้งเหตุผลให้ลูกค้าเรียบร้อยแล้ว' });
+        setIsRejectDialogOpen(false);
+        setIsVerifierOpen(false);
+        setRejectReason('');
+        fetchPendingDeals();
     };
 
     if (isLoading) {

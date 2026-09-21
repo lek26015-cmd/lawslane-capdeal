@@ -78,6 +78,21 @@ export async function requireSelfOrAdmin(targetUid: string): Promise<Session> {
   return session;
 }
 
+/**
+ * ผู้เรียกต้องเป็นแอดมิน — ใช้กับ server action ที่แตะข้อมูลการเงิน
+ *
+ * verifyAdmin() ใน ./admin-auth อ่านเฉพาะ header Authorization จึงใช้กับ server
+ * action ไม่ได้ (ไม่มี header นั้น) ตัวนี้ยึด session cookie เป็นหลักเหมือน
+ * requireUser() และรับ claim ทั้ง `admin` และ `role` ให้ตรงกับ Lawslane/
+ */
+export async function requireAdmin(): Promise<Session> {
+  const session = await requireUser();
+  if (session.token.admin !== true && session.token.role !== 'admin') {
+    throw new AuthError('Forbidden: admin access required', 403);
+  }
+  return session;
+}
+
 /** ตัวช่วยสำหรับ API route */
 export function authErrorResponse(error: unknown) {
   if (error instanceof AuthError) {
