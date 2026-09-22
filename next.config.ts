@@ -110,6 +110,32 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    // หลังบ้านของ capdeal ย้ายไป admin.lawslane.com แล้ว (Module 7)
+    // /api/webhooks/stripe ยังอยู่ที่นี่ Stripe ชี้ URL นั้นไว้ ห้ามย้าย
+    return [
+      {
+        source: '/:locale(th|en)/admin/contracts/:path*',
+        destination: 'https://admin.lawslane.com/capdeal/contracts',
+        permanent: false,
+      },
+      {
+        source: '/:locale(th|en)/admin/finance/:path*',
+        destination: 'https://admin.lawslane.com/capdeal/finance',
+        permanent: false,
+      },
+      {
+        source: '/:locale(th|en)/admin/users/:path*',
+        destination: 'https://admin.lawslane.com/customers',
+        permanent: false,
+      },
+      {
+        source: '/:locale(th|en)/admin/:path*',
+        destination: 'https://admin.lawslane.com/',
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default withNextIntl(nextConfig);

@@ -13,7 +13,8 @@ import type { DecodedIdToken } from 'firebase-admin/auth';
  * ⚠️ middleware.ts ของแอปนี้ใช้เป็นด่านไม่ได้: ตรรกะ auth ทำงานเฉพาะเมื่อ host
  *    ขึ้นต้นด้วย `business.` และ matcher ก็ไม่ครอบ /api
  *
- * สำหรับการตรวจสิทธิ์แอดมิน ใช้ verifyAdmin() ใน ./admin-auth แทน
+ * หลังบ้านของ capdeal ย้ายไป admin.lawslane.com/capdeal แล้ว (Module 7)
+ * requireAdmin() ด้านล่างเหลือไว้กัน server action ที่ยังอยู่ในรีโปนี้
  */
 
 export class AuthError extends Error {
@@ -81,9 +82,8 @@ export async function requireSelfOrAdmin(targetUid: string): Promise<Session> {
 /**
  * ผู้เรียกต้องเป็นแอดมิน — ใช้กับ server action ที่แตะข้อมูลการเงิน
  *
- * verifyAdmin() ใน ./admin-auth อ่านเฉพาะ header Authorization จึงใช้กับ server
- * action ไม่ได้ (ไม่มี header นั้น) ตัวนี้ยึด session cookie เป็นหลักเหมือน
- * requireUser() และรับ claim ทั้ง `admin` และ `role` ให้ตรงกับ Lawslane/
+ * ยึด session cookie เป็นหลักเหมือน requireUser() และรับ claim ทั้ง `admin`
+ * และ `role` ให้ตรงกับ Lawslane/
  */
 export async function requireAdmin(): Promise<Session> {
   const session = await requireUser();
