@@ -137,11 +137,19 @@ export async function resolvePaymentAmount(input: {
             couponLabel = c.code ?? code;
         }
 
+        const finalAmount = Math.max(0, Math.round((baseFee - discount) * 100) / 100);
+        // ยอด 0 ไม่มีสลิปให้ตรวจ → ไม่ขึ้นคิวหลังบ้าน และขั้นอนุมัติก็ปฏิเสธยอด ≤ 0
+        // ถ้าปล่อยผ่าน คูปองถูกตัดสิทธิ์ไปแล้วแต่เคสค้าง pending_payment ถาวร
+        // (ถ้าจะรองรับคูปองลด 100% ต้องออกแบบให้ server เปิดเคสเองใน transaction)
+        if (finalAmount <= 0) {
+            return { ok: false, error: 'ยอดชำระต้องมากกว่า 0 บาท — คูปองนี้ใช้ลดจนเหลือ 0 ไม่ได้' };
+        }
+
         return {
             ok: true,
             baseFee,
             discount,
-            finalAmount: Math.max(0, Math.round((baseFee - discount) * 100) / 100),
+            finalAmount,
             couponId,
             couponLabel,
         };
@@ -388,6 +396,11 @@ export async function payAdditionalFee(input: {
             const requested = Number(fresh.data()?.pendingFeeRequest?.amount);
             if (!fresh.exists || requested !== price.baseFee) {
                 throw new StaleFeeRequestError('คำขอชำระค่าบริการเพิ่มเติมเปลี่ยนไปแล้ว กรุณาโหลดหน้าใหม่');
+            }
+            // ส่งซ้ำระหว่างรอตรวจจะเขียนทับสลิปใบแรกจนหายจากคิวหลังบ้าน และตัดคูปองซ้ำ
+            // (แอดมินกดปฏิเสธแล้วส่งใหม่ได้ เพราะขั้นปฏิเสธล้าง hasNewPayment)
+            if (fresh.data()?.hasNewPayment === true && fresh.data()?.pendingPaymentDetails?.type === 'additional') {
+                throw new StaleFeeRequestError('มีรายการแจ้งชำระค่าบริการเพิ่มเติมรอตรวจอยู่แล้ว');
             }
             if (price.couponId) await redeemCouponInTx(tx, db, price.couponId);
 
