@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { resolvePaymentAmount, redeemCoupon, createConsultationChat, createAppointment, payAdditionalFee, type PaymentType, type ResolvedPrice } from '@/app/actions/payment-actions';
+import { resolvePaymentAmount, createConsultationChat, createAppointment, payAdditionalFee, type PaymentType, type ResolvedPrice } from '@/app/actions/payment-actions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import QRCode from 'qrcode.react';
 import generatePayload from 'promptpay-qr';

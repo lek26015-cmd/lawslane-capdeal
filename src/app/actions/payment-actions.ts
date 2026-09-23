@@ -2,6 +2,7 @@
 
 import { initAdmin } from '@/lib/firebase-admin';
 import { requireUser, AuthError } from '@/lib/auth-guard';
+import { redeemCouponInTx, CouponRedeemError } from '@/lib/coupon-server';
 
 /**
  * คำนวณยอดที่ต้องชำระฝั่ง server — อย่าเชื่อตัวเลขใดๆ จากเบราว์เซอร์
@@ -152,38 +153,13 @@ export async function resolvePaymentAmount(input: {
 }
 
 /**
- * ตัดสิทธิ์คูปอง 1 ครั้ง — ต้องทำฝั่ง server
+ * การตัดสิทธิ์คูปองย้ายไป src/lib/coupon-server.ts (server-only) แล้ว
  *
- * เดิม client ยิง updateDoc(coupons/{id}, { usedCount: increment(1) }) เอง
- * ซึ่งหลัง deploy firestore.rules ชุดใหม่ (coupons เขียนได้เฉพาะแอดมิน) จะถูก
- * ปฏิเสธเงียบๆ → usedCount ไม่เคยเพิ่ม คูปองใช้ซ้ำได้ไม่จำกัด
- *
- * ใช้ transaction เพื่อไม่ให้ยิงพร้อมกันแล้วเกิน usageLimit
+ * เดิม redeemCoupon() ถูก export จากไฟล์ 'use server' นี้ → กลายเป็น endpoint ที่
+ * ใครล็อกอินก็ยิงตรงได้ด้วย couponId ใดก็ได้ วนยิงจนคูปองของคนอื่นเต็มโควตา
+ * และยังถูกเรียกหลังเขียนรายการไปแล้ว ถ้าล้มก็แค่ log ทิ้ง → ยิงพร้อมกันหลายคำขอ
+ * ได้ส่วนลดเกิน usageLimit ตอนนี้ตัดสิทธิ์ใน transaction เดียวกับการเขียนรายการ
  */
-export async function redeemCoupon(couponId: string): Promise<{ ok: boolean; error?: string }> {
-    try {
-        await requireUser();
-        const app = await initAdmin();
-        if (!app) return { ok: false, error: 'ระบบยังไม่พร้อม' };
-        const db = app.firestore();
-        const ref = db.collection('coupons').doc(couponId);
-
-        await db.runTransaction(async (tx) => {
-            const snap = await tx.get(ref);
-            if (!snap.exists) throw new Error('ไม่พบคูปอง');
-            const c = snap.data()!;
-            const used = c.usedCount ?? 0;
-            if (c.usageLimit && used >= c.usageLimit) throw new Error('คูปองถูกใช้ครบแล้ว');
-            tx.update(ref, { usedCount: used + 1 });
-        });
-
-        return { ok: true };
-    } catch (e) {
-        console.error('redeemCoupon failed:', e);
-        return { ok: false, error: e instanceof Error ? e.message : 'ตัดสิทธิ์คูปองไม่สำเร็จ' };
-    }
-}
-
 
 /**
  * สร้างเอกสาร Ticket สนทนา / นัดหมาย / ค่าบริการเพิ่มเติม — ต้องทำฝั่ง server
@@ -198,6 +174,10 @@ export async function redeemCoupon(couponId: string): Promise<{ ok: boolean; err
  * สลิป แล้วรอแอดมินตรวจ ดังนั้นสถานะที่ server เขียนได้จึงมีแค่ 'pending_payment'
  * เท่านั้น ห้ามมี path ไหนตั้ง 'active'/'paid' เองเด็ดขาด
  */
+
+// โยนจากใน transaction เพื่อให้ล้มทั้งก้อน แล้วคืนข้อความให้ผู้ใช้ — ไม่ export
+// เพราะไฟล์ 'use server' export ได้เฉพาะ async function
+class StaleFeeRequestError extends Error {}
 
 type CreateResult<T extends string> = ({ ok: true } & Record<T, string>) | { ok: false; error: string };
 
@@ -236,7 +216,8 @@ export async function createConsultationChat(input: {
         if (!price.ok) return { ok: false, error: price.error };
 
         const chatRef = db.collection('chats').doc();
-        await chatRef.set({
+        const firstMessageRef = chatRef.collection('messages').doc();
+        const chatDoc = {
             participants: [uid, target.userId],
             createdAt: new Date(),
             caseTitle: `Ticket สนทนา: ${input.initialMessage.substring(0, 30)}...`,
@@ -252,22 +233,24 @@ export async function createConsultationChat(input: {
             couponCode: price.couponLabel,
             couponId: price.couponId,
             hasNewPayment: true,
-        });
+        };
 
-        await chatRef.collection('messages').add({
-            text: input.initialMessage,
-            senderId: uid,
-            timestamp: new Date(),
+        // ตัดคูปอง + สร้างห้อง + ข้อความแรก ในก้อนเดียว — คูปองเต็มระหว่างทาง
+        // ทั้งก้อนล้ม ไม่มีห้องที่ได้ส่วนลดโดยไม่ถูกนับสิทธิ์
+        await db.runTransaction(async (tx) => {
+            if (price.couponId) await redeemCouponInTx(tx, db, price.couponId);
+            tx.set(chatRef, chatDoc);
+            tx.set(firstMessageRef, {
+                text: input.initialMessage,
+                senderId: uid,
+                timestamp: new Date(),
+            });
         });
-
-        if (price.couponId) {
-            const redeemed = await redeemCoupon(price.couponId);
-            if (!redeemed.ok) console.error('redeemCoupon failed:', redeemed.error);
-        }
 
         return { ok: true, chatId: chatRef.id };
     } catch (e) {
         if (e instanceof AuthError) return { ok: false, error: e.message };
+        if (e instanceof CouponRedeemError) return { ok: false, error: e.message };
         console.error('createConsultationChat failed:', e);
         return { ok: false, error: 'สร้างรายการไม่สำเร็จ' };
     }
@@ -298,7 +281,7 @@ export async function createAppointment(input: {
         if (!price.ok) return { ok: false, error: price.error };
 
         const ref = db.collection('appointments').doc();
-        await ref.set({
+        const appointmentDoc = {
             userId: uid,
             lawyerId: input.lawyerId,
             lawyerUserId: target.userId,
@@ -315,16 +298,17 @@ export async function createAppointment(input: {
             couponCode: price.couponLabel,
             couponId: price.couponId,
             hasNewPayment: true,
-        });
+        };
 
-        if (price.couponId) {
-            const redeemed = await redeemCoupon(price.couponId);
-            if (!redeemed.ok) console.error('redeemCoupon failed:', redeemed.error);
-        }
+        await db.runTransaction(async (tx) => {
+            if (price.couponId) await redeemCouponInTx(tx, db, price.couponId);
+            tx.set(ref, appointmentDoc);
+        });
 
         return { ok: true, appointmentId: ref.id };
     } catch (e) {
         if (e instanceof AuthError) return { ok: false, error: e.message };
+        if (e instanceof CouponRedeemError) return { ok: false, error: e.message };
         console.error('createAppointment failed:', e);
         return { ok: false, error: 'สร้างนัดหมายไม่สำเร็จ' };
     }
@@ -385,31 +369,40 @@ export async function payAdditionalFee(input: {
         });
         if (!price.ok) return { ok: false, error: price.error };
 
-        await chatRef.update({
-            lastPaymentAt: new Date(),
-            hasNewPayment: true,
-            pendingPaymentDetails: {
-                amount: price.finalAmount,
-                slipUrl: input.slipUrl ?? null,
-                type: 'additional',
-                submittedAt: new Date().toISOString(),
-            },
-        });
+        const messageRef = chatRef.collection('messages').doc();
+        await db.runTransaction(async (tx) => {
+            // อ่านห้องซ้ำใน transaction — ระหว่างคิดราคากับยืนยัน ทนายอาจแก้/ยกเลิก
+            // คำขอไปแล้ว ถ้ายอดไม่ตรงกับที่คิดไว้ให้ล้มทั้งก้อน ไม่ตัดคูปองฟรีๆ
+            const fresh = await tx.get(chatRef);
+            const requested = Number(fresh.data()?.pendingFeeRequest?.amount);
+            if (!fresh.exists || requested !== price.baseFee) {
+                throw new StaleFeeRequestError('คำขอชำระค่าบริการเพิ่มเติมเปลี่ยนไปแล้ว กรุณาโหลดหน้าใหม่');
+            }
+            if (price.couponId) await redeemCouponInTx(tx, db, price.couponId);
 
-        await chatRef.collection('messages').add({
-            text: `💳 ลูกความแจ้งชำระค่าบริการเพิ่มเติมจำนวน ฿${price.finalAmount.toLocaleString()} — รอตรวจสอบสลิป`,
-            senderId: 'system',
-            timestamp: new Date(),
+            tx.update(chatRef, {
+                lastPaymentAt: new Date(),
+                hasNewPayment: true,
+                pendingPaymentDetails: {
+                    amount: price.finalAmount,
+                    slipUrl: input.slipUrl ?? null,
+                    type: 'additional',
+                    submittedAt: new Date().toISOString(),
+                },
+            });
+            tx.set(messageRef, {
+                text: `💳 ลูกความแจ้งชำระค่าบริการเพิ่มเติมจำนวน ฿${price.finalAmount.toLocaleString()} — รอตรวจสอบสลิป`,
+                senderId: 'system',
+                timestamp: new Date(),
+            });
         });
-
-        if (price.couponId) {
-            const redeemed = await redeemCoupon(price.couponId);
-            if (!redeemed.ok) console.error('redeemCoupon failed:', redeemed.error);
-        }
 
         return { ok: true, amount: price.finalAmount };
     } catch (e) {
         if (e instanceof AuthError) return { ok: false, error: e.message };
+        if (e instanceof CouponRedeemError || e instanceof StaleFeeRequestError) {
+            return { ok: false, error: e.message };
+        }
         console.error('payAdditionalFee failed:', e);
         return { ok: false, error: 'บันทึกการชำระเงินไม่สำเร็จ' };
     }
