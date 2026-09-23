@@ -82,6 +82,16 @@ export async function resolvePaymentAmount(input: {
                     return { ok: false, error: 'งวดนี้ชำระแล้ว' };
                 }
                 baseFee = Number(installments[i].amount) || 0;
+            } else if (input.paymentType === 'additional') {
+                // ค่าบริการเพิ่มเติม = ยอดที่ทนายขอไว้ใน pendingFeeRequest เท่านั้น
+                // เดิมใช้ chat.amount (ยอดรวมของเคสทั้งหมด) เป็นฐาน → ลูกความถูกเรียก
+                // เก็บเท่ายอดเคสเดิมทุกครั้ง แล้ว payAdditionalFee ยังบวกยอดนี้ทับ
+                // chat.amount ซ้ำอีก ยอดเคสจึงเพิ่มเป็นสองเท่า
+                const requested = Number(chat.pendingFeeRequest?.amount);
+                if (!chat.pendingFeeRequest || !Number.isFinite(requested) || requested <= 0) {
+                    return { ok: false, error: 'ไม่พบคำขอชำระค่าบริการเพิ่มเติมจากทนายความ' };
+                }
+                baseFee = requested;
             } else {
                 baseFee = Number(chat.amount ?? chat.quotedAmount ?? 0);
             }
@@ -311,6 +321,12 @@ export async function createAppointment(input: {
  * เดิม client อ่าน chats/{id}.amount แล้ว updateDoc ยอดใหม่เป็น
  * `currentAmount + finalFee` เอง → แก้ตัวเลขได้ตามใจ และยังลบ pendingFeeRequest
  * ของทนายทิ้งได้โดยไม่ต้องจ่ายอะไรเลย
+ *
+ * ขั้นนี้เป็นแค่ "แจ้งโอนพร้อมสลิป" — ยังไม่มีใครยืนยันว่าเงินเข้าจริง จึงเขียน
+ * pendingPaymentDetails อย่างเดียวแบบเดียวกับ markCasePaidAction ของเว็บหลัก
+ * ห้ามแตะ amount และห้ามล้าง pendingFeeRequest ที่นี่ ไม่งั้นแนบสลิปปลอมก็ปิด
+ * คำขอของทนายได้ และยอดเคสเพิ่มขึ้นทั้งที่เงินยังไม่เข้า การปรับยอดรวม/ปิดคำขอ
+ * เป็นหน้าที่ของขั้นอนุมัติสลิปฝั่งแอดมิน
  */
 export async function payAdditionalFee(input: {
     chatId: string;
@@ -333,7 +349,20 @@ export async function payAdditionalFee(input: {
             return { ok: false, error: 'ไม่มีสิทธิ์ชำระเงินรายการนี้' };
         }
 
-        // ยอดมาจากเอกสารใน Firestore เท่านั้น
+        // ทนายเป็นคนขอค่าบริการ จะมาแจ้งชำระเองไม่ได้ — participants มีทั้งสองฝ่าย
+        // ด่านข้างบนจึงไม่พอ (เว็บหลักกันด้วย requireChatRole แบบเดียวกัน)
+        const clientId = chat.userId || chat.clientId;
+        if (clientId && clientId !== uid) {
+            return { ok: false, error: 'ทนายความไม่สามารถแจ้งชำระเงินแทนลูกความได้' };
+        }
+        if (chat.lawyerId) {
+            const lawyerSnap = await db.collection('lawyerProfiles').doc(chat.lawyerId).get();
+            if (lawyerSnap.data()?.userId === uid) {
+                return { ok: false, error: 'ทนายความไม่สามารถแจ้งชำระเงินแทนลูกความได้' };
+            }
+        }
+
+        // ยอดมาจาก pendingFeeRequest ในเอกสาร Firestore เท่านั้น
         const price = await resolvePaymentAmount({
             paymentType: 'additional',
             chatId: input.chatId,
@@ -342,9 +371,6 @@ export async function payAdditionalFee(input: {
         if (!price.ok) return { ok: false, error: price.error };
 
         await chatRef.update({
-            // ยอดเดิมอ่านฝั่ง server ไม่ใช่ตัวเลขที่ client ส่งมา
-            amount: (Number(chat.amount) || 0) + price.finalAmount,
-            pendingFeeRequest: null,
             lastPaymentAt: new Date(),
             hasNewPayment: true,
             pendingPaymentDetails: {
