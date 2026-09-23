@@ -243,17 +243,10 @@ function PaymentPageContent() {
 
                 setPaymentSuccess(true);
 
-                // Send Email Notification to Lawyer
-                import('@/app/actions/email').then(({ sendLawyerNewCaseEmail }) => {
-                    const caseLink = `${window.location.origin}/chat/${created.chatId}?lawyerId=${lawyer.id}&clientId=${user.uid}&view=lawyer`;
-                    sendLawyerNewCaseEmail(
-                        lawyer.email,
-                        lawyer.name,
-                        user.displayName || 'ลูกค้า',
-                        `Ticket สนทนา: ${initialMessage.substring(0, 30)}...`,
-                        caseLink
-                    ).catch(e => console.error('sendLawyerNewCaseEmail failed:', e));
-                });
+                // ไม่ส่งอีเมล "มีเคสใหม่" ให้ทนายตรงนี้แล้ว — ห้องเพิ่งเป็น pending_payment
+                // ยังไม่มีใครตรวจสลิป ทนายจะได้อีเมลเคสที่อาจไม่เคยจ่ายจริง อีเมลแจ้งทนาย
+                // ส่งตอนแอดมินอนุมัติสลิป (approvePaymentSlipAction → notifyPaymentCompletedAction
+                // ใน lawslane-admin)
 
             } else if (paymentType === 'appointment' && dateStr) {
                 const created = await createAppointment({
