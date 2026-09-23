@@ -21,7 +21,7 @@ import generatePayload from 'promptpay-qr';
 import { useChat } from '@/context/chat-context';
 import { Textarea } from '@/components/ui/textarea';
 import { useFirebase } from '@/firebase';
-import { collection, doc, getDoc, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { uploadToR2 } from '@/app/actions/upload-r2';
 import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '@/lib/constants';
 import { compressImageToBase64 } from '@/lib/image-utils';

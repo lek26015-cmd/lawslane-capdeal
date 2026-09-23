@@ -179,6 +179,14 @@ export async function resolvePaymentAmount(input: {
 // เพราะไฟล์ 'use server' export ได้เฉพาะ async function
 class StaleFeeRequestError extends Error {}
 
+// ทุกการชำระในรีโปนี้เป็นแจ้งโอนพร้อมสลิป — ไม่มีสลิปแปลว่าไม่มีอะไรให้แอดมินตรวจ
+// เดิมรับ slipUrl ว่างได้ แล้วเกิดรายการ pending_payment ลอยๆ (หลังบ้านกรองเฉพาะ
+// รายการที่มีสลิป จึงไม่มีใครเห็น) ยกเว้นยอด 0 จากคูปองเต็มจำนวนที่ไม่มีอะไรต้องโอน
+const SLIP_REQUIRED_ERROR = 'กรุณาแนบสลิปการโอนเงิน';
+function isMissingSlip(slipUrl: string | null | undefined, finalAmount: number) {
+    return finalAmount > 0 && !slipUrl?.trim();
+}
+
 type CreateResult<T extends string> = ({ ok: true } & Record<T, string>) | { ok: false; error: string };
 
 /**
@@ -214,6 +222,7 @@ export async function createConsultationChat(input: {
 
         const price = await resolvePaymentAmount({ paymentType: 'chat', couponCode: input.couponCode });
         if (!price.ok) return { ok: false, error: price.error };
+        if (isMissingSlip(input.slipUrl, price.finalAmount)) return { ok: false, error: SLIP_REQUIRED_ERROR };
 
         const chatRef = db.collection('chats').doc();
         const firstMessageRef = chatRef.collection('messages').doc();
@@ -279,6 +288,7 @@ export async function createAppointment(input: {
 
         const price = await resolvePaymentAmount({ paymentType: 'appointment', couponCode: input.couponCode });
         if (!price.ok) return { ok: false, error: price.error };
+        if (isMissingSlip(input.slipUrl, price.finalAmount)) return { ok: false, error: SLIP_REQUIRED_ERROR };
 
         const ref = db.collection('appointments').doc();
         const appointmentDoc = {
@@ -368,6 +378,7 @@ export async function payAdditionalFee(input: {
             couponCode: input.couponCode,
         });
         if (!price.ok) return { ok: false, error: price.error };
+        if (isMissingSlip(input.slipUrl, price.finalAmount)) return { ok: false, error: SLIP_REQUIRED_ERROR };
 
         const messageRef = chatRef.collection('messages').doc();
         await db.runTransaction(async (tx) => {
