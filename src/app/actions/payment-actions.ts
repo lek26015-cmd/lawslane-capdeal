@@ -173,3 +173,203 @@ export async function redeemCoupon(couponId: string): Promise<{ ok: boolean; err
         return { ok: false, error: e instanceof Error ? e.message : 'ตัดสิทธิ์คูปองไม่สำเร็จ' };
     }
 }
+
+
+/**
+ * สร้างเอกสาร Ticket สนทนา / นัดหมาย / ค่าบริการเพิ่มเติม — ต้องทำฝั่ง server
+ *
+ * ยกชุดเดียวกับ Lawslane/src/app/actions/payment-actions.ts ของเดิมหน้า /payment
+ * ของ repo นี้ยิง setDoc(chats/{id}) / addDoc(appointments) / updateDoc(chats/{id})
+ * จากเบราว์เซอร์ทั้งหมด พร้อม `amount` ที่ตัวเองคำนวณ และกฎ Firestore ก็เป็น
+ * `allow create: if isSignedIn()` เฉยๆ → ใครก็เปิด console สร้างเอกสารพร้อม
+ * `amount: 0, status: 'paid'` ได้โดยไม่ต้องผ่านหน้าเว็บเลย
+ *
+ * repo นี้ไม่มีการตรวจสลิปอัตโนมัติ (SlipOK) — ทุกการชำระเงินเป็นการแจ้งโอนพร้อม
+ * สลิป แล้วรอแอดมินตรวจ ดังนั้นสถานะที่ server เขียนได้จึงมีแค่ 'pending_payment'
+ * เท่านั้น ห้ามมี path ไหนตั้ง 'active'/'paid' เองเด็ดขาด
+ */
+
+type CreateResult<T extends string> = ({ ok: true } & Record<T, string>) | { ok: false; error: string };
+
+export async function createConsultationChat(input: {
+    lawyerId: string;
+    lawyerUserId: string;
+    initialMessage: string;
+    slipUrl?: string | null;
+    couponCode?: string;
+}): Promise<CreateResult<'chatId'>> {
+    try {
+        const { uid } = await requireUser();
+        const app = await initAdmin();
+        if (!app) return { ok: false, error: 'ระบบยังไม่พร้อม' };
+        const db = app.firestore();
+
+        if (!input.lawyerUserId) return { ok: false, error: 'ไม่พบทนายความปลายทาง' };
+
+        const price = await resolvePaymentAmount({ paymentType: 'chat', couponCode: input.couponCode });
+        if (!price.ok) return { ok: false, error: price.error };
+
+        const chatRef = db.collection('chats').doc();
+        await chatRef.set({
+            participants: [uid, input.lawyerUserId],
+            createdAt: new Date(),
+            caseTitle: `Ticket สนทนา: ${input.initialMessage.substring(0, 30)}...`,
+            status: 'pending_payment',
+            slipUrl: input.slipUrl ?? null,
+            lawyerId: input.lawyerId,
+            userId: uid,
+            lastMessage: input.initialMessage,
+            lastMessageAt: new Date(),
+            amount: price.finalAmount,
+            originalFee: price.baseFee,
+            discount: price.discount,
+            couponCode: price.couponLabel,
+            couponId: price.couponId,
+            hasNewPayment: true,
+        });
+
+        await chatRef.collection('messages').add({
+            text: input.initialMessage,
+            senderId: uid,
+            timestamp: new Date(),
+        });
+
+        if (price.couponId) {
+            const redeemed = await redeemCoupon(price.couponId);
+            if (!redeemed.ok) console.error('redeemCoupon failed:', redeemed.error);
+        }
+
+        return { ok: true, chatId: chatRef.id };
+    } catch (e) {
+        if (e instanceof AuthError) return { ok: false, error: e.message };
+        console.error('createConsultationChat failed:', e);
+        return { ok: false, error: 'สร้างรายการไม่สำเร็จ' };
+    }
+}
+
+export async function createAppointment(input: {
+    lawyerId: string;
+    lawyerUserId: string;
+    appointmentDate: string;
+    description?: string | null;
+    slipUrl?: string | null;
+    couponCode?: string;
+}): Promise<CreateResult<'appointmentId'>> {
+    try {
+        const { uid } = await requireUser();
+        const app = await initAdmin();
+        if (!app) return { ok: false, error: 'ระบบยังไม่พร้อม' };
+        const db = app.firestore();
+
+        if (!input.lawyerId) return { ok: false, error: 'ไม่พบทนายความปลายทาง' };
+
+        const when = new Date(input.appointmentDate);
+        if (Number.isNaN(when.getTime())) return { ok: false, error: 'วันเวลานัดหมายไม่ถูกต้อง' };
+
+        const price = await resolvePaymentAmount({ paymentType: 'appointment', couponCode: input.couponCode });
+        if (!price.ok) return { ok: false, error: price.error };
+
+        const lawyerSnap = await db.collection('lawyerProfiles').doc(input.lawyerId).get();
+        const lawyer = lawyerSnap.data() ?? {};
+
+        const ref = db.collection('appointments').doc();
+        await ref.set({
+            userId: uid,
+            lawyerId: input.lawyerId,
+            lawyerUserId: lawyer.userId ?? input.lawyerUserId ?? null,
+            lawyerName: lawyer.name ?? '',
+            lawyerImageUrl: lawyer.imageUrl ?? null,
+            appointmentDate: when,
+            description: input.description ?? null,
+            status: 'pending_payment',
+            createdAt: new Date(),
+            slipUrl: input.slipUrl ?? null,
+            amount: price.finalAmount,
+            originalFee: price.baseFee,
+            discount: price.discount,
+            couponCode: price.couponLabel,
+            couponId: price.couponId,
+            hasNewPayment: true,
+        });
+
+        if (price.couponId) {
+            const redeemed = await redeemCoupon(price.couponId);
+            if (!redeemed.ok) console.error('redeemCoupon failed:', redeemed.error);
+        }
+
+        return { ok: true, appointmentId: ref.id };
+    } catch (e) {
+        if (e instanceof AuthError) return { ok: false, error: e.message };
+        console.error('createAppointment failed:', e);
+        return { ok: false, error: 'สร้างนัดหมายไม่สำเร็จ' };
+    }
+}
+
+/**
+ * แจ้งชำระค่าบริการเพิ่มเติมของเคสที่มีอยู่
+ *
+ * เดิม client อ่าน chats/{id}.amount แล้ว updateDoc ยอดใหม่เป็น
+ * `currentAmount + finalFee` เอง → แก้ตัวเลขได้ตามใจ และยังลบ pendingFeeRequest
+ * ของทนายทิ้งได้โดยไม่ต้องจ่ายอะไรเลย
+ */
+export async function payAdditionalFee(input: {
+    chatId: string;
+    slipUrl?: string | null;
+    couponCode?: string;
+}): Promise<{ ok: true; amount: number } | { ok: false; error: string }> {
+    try {
+        const { uid } = await requireUser();
+        const app = await initAdmin();
+        if (!app) return { ok: false, error: 'ระบบยังไม่พร้อม' };
+        const db = app.firestore();
+
+        const chatRef = db.collection('chats').doc(input.chatId);
+        const chatSnap = await chatRef.get();
+        if (!chatSnap.exists) return { ok: false, error: 'ไม่พบรายการที่ต้องชำระ' };
+
+        const chat = chatSnap.data()!;
+        const participants: string[] = chat.participants ?? [];
+        if (!participants.includes(uid)) {
+            return { ok: false, error: 'ไม่มีสิทธิ์ชำระเงินรายการนี้' };
+        }
+
+        // ยอดมาจากเอกสารใน Firestore เท่านั้น
+        const price = await resolvePaymentAmount({
+            paymentType: 'additional',
+            chatId: input.chatId,
+            couponCode: input.couponCode,
+        });
+        if (!price.ok) return { ok: false, error: price.error };
+
+        await chatRef.update({
+            // ยอดเดิมอ่านฝั่ง server ไม่ใช่ตัวเลขที่ client ส่งมา
+            amount: (Number(chat.amount) || 0) + price.finalAmount,
+            pendingFeeRequest: null,
+            lastPaymentAt: new Date(),
+            hasNewPayment: true,
+            pendingPaymentDetails: {
+                amount: price.finalAmount,
+                slipUrl: input.slipUrl ?? null,
+                type: 'additional',
+                submittedAt: new Date().toISOString(),
+            },
+        });
+
+        await chatRef.collection('messages').add({
+            text: `💳 ลูกความแจ้งชำระค่าบริการเพิ่มเติมจำนวน ฿${price.finalAmount.toLocaleString()} — รอตรวจสอบสลิป`,
+            senderId: 'system',
+            timestamp: new Date(),
+        });
+
+        if (price.couponId) {
+            const redeemed = await redeemCoupon(price.couponId);
+            if (!redeemed.ok) console.error('redeemCoupon failed:', redeemed.error);
+        }
+
+        return { ok: true, amount: price.finalAmount };
+    } catch (e) {
+        if (e instanceof AuthError) return { ok: false, error: e.message };
+        console.error('payAdditionalFee failed:', e);
+        return { ok: false, error: 'บันทึกการชำระเงินไม่สำเร็จ' };
+    }
+}
