@@ -230,7 +230,6 @@ function PaymentPageContent() {
                 // ได้ด้วยเมื่อไม่ได้แนบสลิป (กฎ chats เป็น allow create: if isSignedIn())
                 const created = await createConsultationChat({
                     lawyerId: lawyer.id,
-                    lawyerUserId: targetLawyerUserId ?? '',
                     initialMessage,
                     slipUrl,
                     couponCode: appliedCoupon?.code || undefined,
@@ -259,7 +258,6 @@ function PaymentPageContent() {
             } else if (paymentType === 'appointment' && dateStr) {
                 const created = await createAppointment({
                     lawyerId: lawyer.id,
-                    lawyerUserId: targetLawyerUserId ?? '',
                     appointmentDate: dateStr,
                     description,
                     slipUrl,

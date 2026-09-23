@@ -201,9 +201,23 @@ export async function redeemCoupon(couponId: string): Promise<{ ok: boolean; err
 
 type CreateResult<T extends string> = ({ ok: true } & Record<T, string>) | { ok: false; error: string };
 
+/**
+ * หา uid ของทนายจาก lawyerProfiles ฝั่ง server
+ *
+ * เดิมรับ lawyerUserId จาก client แล้วใส่ลง participants ตรงๆ → ส่ง uid ใครก็ได้
+ * เข้ามา คนนั้นจะได้สิทธิ์อ่านห้องแชท/สลิปของลูกความทั้งที่ไม่ใช่ทนายเจ้าของเคส
+ */
+async function resolveLawyerUserId(db: FirebaseFirestore.Firestore, lawyerId: string) {
+    if (!lawyerId) return null;
+    const snap = await db.collection('lawyerProfiles').doc(lawyerId).get();
+    if (!snap.exists) return null;
+    const lawyer = snap.data()!;
+    if (!lawyer.userId) return null;
+    return { userId: lawyer.userId as string, lawyer };
+}
+
 export async function createConsultationChat(input: {
     lawyerId: string;
-    lawyerUserId: string;
     initialMessage: string;
     slipUrl?: string | null;
     couponCode?: string;
@@ -214,14 +228,16 @@ export async function createConsultationChat(input: {
         if (!app) return { ok: false, error: 'ระบบยังไม่พร้อม' };
         const db = app.firestore();
 
-        if (!input.lawyerUserId) return { ok: false, error: 'ไม่พบทนายความปลายทาง' };
+        const target = await resolveLawyerUserId(db, input.lawyerId);
+        if (!target) return { ok: false, error: 'ไม่พบทนายความปลายทาง' };
+        if (target.userId === uid) return { ok: false, error: 'ไม่สามารถเปิด Ticket กับตัวเองได้' };
 
         const price = await resolvePaymentAmount({ paymentType: 'chat', couponCode: input.couponCode });
         if (!price.ok) return { ok: false, error: price.error };
 
         const chatRef = db.collection('chats').doc();
         await chatRef.set({
-            participants: [uid, input.lawyerUserId],
+            participants: [uid, target.userId],
             createdAt: new Date(),
             caseTitle: `Ticket สนทนา: ${input.initialMessage.substring(0, 30)}...`,
             status: 'pending_payment',
@@ -259,7 +275,6 @@ export async function createConsultationChat(input: {
 
 export async function createAppointment(input: {
     lawyerId: string;
-    lawyerUserId: string;
     appointmentDate: string;
     description?: string | null;
     slipUrl?: string | null;
@@ -271,7 +286,10 @@ export async function createAppointment(input: {
         if (!app) return { ok: false, error: 'ระบบยังไม่พร้อม' };
         const db = app.firestore();
 
-        if (!input.lawyerId) return { ok: false, error: 'ไม่พบทนายความปลายทาง' };
+        const target = await resolveLawyerUserId(db, input.lawyerId);
+        if (!target) return { ok: false, error: 'ไม่พบทนายความปลายทาง' };
+        if (target.userId === uid) return { ok: false, error: 'ไม่สามารถนัดหมายกับตัวเองได้' };
+        const lawyer = target.lawyer;
 
         const when = new Date(input.appointmentDate);
         if (Number.isNaN(when.getTime())) return { ok: false, error: 'วันเวลานัดหมายไม่ถูกต้อง' };
@@ -279,14 +297,11 @@ export async function createAppointment(input: {
         const price = await resolvePaymentAmount({ paymentType: 'appointment', couponCode: input.couponCode });
         if (!price.ok) return { ok: false, error: price.error };
 
-        const lawyerSnap = await db.collection('lawyerProfiles').doc(input.lawyerId).get();
-        const lawyer = lawyerSnap.data() ?? {};
-
         const ref = db.collection('appointments').doc();
         await ref.set({
             userId: uid,
             lawyerId: input.lawyerId,
-            lawyerUserId: lawyer.userId ?? input.lawyerUserId ?? null,
+            lawyerUserId: target.userId,
             lawyerName: lawyer.name ?? '',
             lawyerImageUrl: lawyer.imageUrl ?? null,
             appointmentDate: when,
