@@ -1,5 +1,12 @@
 
-const WORKER_URL = 'https://lawslane-rag-api.lawslane-app.workers.dev';
+// โฮสต์ lawslane-app.workers.dev ไม่มีอยู่แล้ว (DNS ไม่ resolve) — ตัวที่ใช้งานจริงคือ lawlanes-app
+const WORKER_URL = process.env.NEXT_PUBLIC_RAG_WORKER_URL || 'https://lawslane-rag-api.lawlanes-app.workers.dev';
+
+// server-only: ห้ามตั้งเป็น NEXT_PUBLIC_
+function ragAuthHeaders(): Record<string, string> {
+    const key = process.env.RAG_QUERY_KEY;
+    return key ? { Authorization: `Bearer ${key}` } : {};
+}
 
 export async function retrieveDocuments(query: string, topK: number = 5): Promise<Array<{ source: string, content: string, score: number }>> {
     try {
@@ -7,7 +14,7 @@ export async function retrieveDocuments(query: string, topK: number = 5): Promis
 
         const response = await fetch(`${WORKER_URL}/query`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...ragAuthHeaders() },
             body: JSON.stringify({ question: query })
         });
 
