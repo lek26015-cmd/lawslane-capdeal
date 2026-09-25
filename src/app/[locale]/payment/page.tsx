@@ -14,16 +14,14 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { resolvePaymentAmount, redeemCoupon, type PaymentType, type ResolvedPrice } from '@/app/actions/payment-actions';
+import { resolvePaymentAmount, createConsultationChat, createAppointment, payAdditionalFee, type PaymentType, type ResolvedPrice } from '@/app/actions/payment-actions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import QRCode from 'qrcode.react';
 import generatePayload from 'promptpay-qr';
 import { useChat } from '@/context/chat-context';
 import { Textarea } from '@/components/ui/textarea';
-import { v4 as uuidv4 } from 'uuid';
 import { useFirebase } from '@/firebase';
-import { addDoc, collection, doc, serverTimestamp, setDoc, getDoc, query, where, getDocs, updateDoc } from 'firebase/firestore';
-import { errorEmitter, FirestorePermissionError } from '@/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { uploadToR2 } from '@/app/actions/upload-r2';
 import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '@/lib/constants';
 import { compressImageToBase64 } from '@/lib/image-utils';
@@ -169,7 +167,10 @@ function PaymentPageContent() {
         setServerPrice(res.ok ? res : null);
     };
 
-    const processPayment = async (isManualTransfer = false) => {
+    // หน้านี้เรียก processPayment(true) ทางเดียวเสมอ (ตัดบัตรยังไม่เปิดให้บริการ)
+    // ทุกการชำระเงินจึงเป็นการแจ้งโอนพร้อมสลิปที่รอแอดมินตรวจ — สถานะ 'paid'/'active'
+    // ไม่มี path ไหนตั้งเองได้อีกแล้ว เพราะ server เขียน 'pending_payment' อย่างเดียว
+    const processPayment = async (isManualTransfer = true) => {
         const targetLawyerUserId = lawyer?.userId || lawyer?.id;
         console.log("Starting processPayment", { isManualTransfer, paymentType, user: user?.uid, lawyer: lawyer?.id, targetLawyerUserId });
         setIsProcessing(true);
@@ -224,169 +225,64 @@ function PaymentPageContent() {
             }
 
             if (paymentType === 'chat') {
-                console.log("Processing chat payment...");
-                const newChatId = uuidv4();
-                const chatRef = doc(firestore, 'chats', newChatId);
-                const messagesRef = collection(chatRef, 'messages');
-
-                const chatPayload = {
-                    participants: [user.uid, targetLawyerUserId],
-                    createdAt: serverTimestamp(),
-                    caseTitle: `Ticket สนทนา: ${initialMessage.substring(0, 30)}...`,
-                    status: isManualTransfer ? 'pending_payment' : 'active',
-                    ...(isManualTransfer && { slipUrl }),
-                    lawyerId: lawyer.id, // Add lawyerId for easier querying
-                    userId: user.uid, // Add userId for easier querying
-                    lastMessage: initialMessage,
-                    lastMessageAt: serverTimestamp(),
-                    amount: finalFee, // Store the payment amount
-                    originalFee: fee,
-                    discount: discountAmount,
-                    couponCode: appliedCoupon?.code || null,
-                    couponId: appliedCoupon?.id || null
-                };
-
-                console.log("Creating chat document...", chatPayload);
-
-                await setDoc(chatRef, chatPayload)
-                    .catch(serverError => {
-                        console.error("Error creating chat:", serverError);
-                        const permissionError = new FirestorePermissionError({ path: chatRef.path, operation: 'create', requestResourceData: chatPayload });
-                        errorEmitter.emit('permission-error', permissionError);
-                        throw serverError; // Re-throw to be caught by outer try-catch
-                    });
-
-                console.log("Chat document created.");
-
-                // Always create the initial message
-                const messagePayload = {
-                    text: initialMessage,
-                    senderId: user.uid,
-                    timestamp: serverTimestamp(),
-                };
-                await addDoc(messagesRef, messagePayload)
-                    .catch(serverError => {
-                        const permissionError = new FirestorePermissionError({ path: messagesRef.path, operation: 'create', requestResourceData: messagePayload });
-                        errorEmitter.emit('permission-error', permissionError);
-                        throw serverError;
-                    });
-
-                if (isManualTransfer) {
-                    console.log("Setting payment success (manual)...");
-                    setPaymentSuccess(true);
-                } else {
-                    toast({
-                        title: "ชำระเงินสำเร็จ!",
-                        description: 'คุณสามารถเริ่มสนทนากับทนายความได้แล้ว',
-                    });
-                    router.push(`/chat/${newChatId}?lawyerId=${lawyer.id}`);
-                }
-
-                if (!isManualTransfer) {
-                    // Send Email Notification to Lawyer (Only for instant payment)
-                    import('@/app/actions/email').then(({ sendLawyerNewCaseEmail }) => {
-                        const caseLink = `${window.location.origin}/chat/${newChatId}?lawyerId=${lawyer.id}&clientId=${user.uid}&view=lawyer`;
-                        sendLawyerNewCaseEmail(
-                            lawyer.email,
-                            lawyer.name,
-                            user.displayName || 'ลูกค้า',
-                            `Ticket สนทนา: ${initialMessage.substring(0, 30)}...`,
-                            caseLink
-                        ).then(res => console.log("Email sent:", res));
-                    });
-                } else {
-                    // Notify Admin for Manual Payment - removed
-                }
-                if (serverPrice?.couponId) {
-                    // ตัดสิทธิ์คูปองฝั่ง server — client เขียน coupons ไม่ได้แล้ว
-                    // ตาม firestore.rules ชุดใหม่ ของเดิมจึงถูกปฏิเสธเงียบๆ
-                    const redeemed = await redeemCoupon(serverPrice.couponId);
-                    if (!redeemed.ok) console.error('redeemCoupon failed:', redeemed.error);
-                }
-
-            } else if (paymentType === 'appointment' && dateStr) {
-                console.log("Processing appointment payment...");
-                const appointmentRef = collection(firestore, 'appointments');
-                const appointmentPayload = {
-                    userId: user.uid,
+                // เขียนเอกสารฝั่ง server ทั้งก้อน — ของเดิม client setDoc(chats/{id})
+                // เองพร้อม amount/discount ที่ตัวเองคำนวณ และตั้ง status เป็น 'active'
+                // ได้ด้วยเมื่อไม่ได้แนบสลิป (กฎ chats เป็น allow create: if isSignedIn())
+                const created = await createConsultationChat({
                     lawyerId: lawyer.id,
-                    lawyerUserId: targetLawyerUserId,
-                    lawyerName: lawyer.name,
-                    lawyerImageUrl: lawyer.imageUrl,
-                    appointmentDate: new Date(dateStr),
-                    description: description,
-                    status: (isManualTransfer && finalFee > 0) ? 'pending_payment' : 'pending', // If 0 fee, go straight to pending (awaiting confirmation/acceptance by lawyer, but paid)
-                    createdAt: serverTimestamp(),
-                    ...(isManualTransfer && { slipUrl }),
-                    amount: finalFee,
-                    originalFee: fee,
-                    discount: discountAmount,
-                    couponCode: appliedCoupon?.code || null,
-                    couponId: appliedCoupon?.id || null,
-                    isFree: finalFee === 0
-                };
+                    initialMessage,
+                    slipUrl,
+                    couponCode: appliedCoupon?.code || undefined,
+                });
 
-                console.log("Creating appointment...", appointmentPayload);
-
-                await addDoc(appointmentRef, appointmentPayload)
-                    .catch(serverError => {
-                        console.error("Error creating appointment:", serverError);
-                        const permissionError = new FirestorePermissionError({ path: appointmentRef.path, operation: 'create', requestResourceData: appointmentPayload });
-                        errorEmitter.emit('permission-error', permissionError);
-                        throw serverError;
-                    });
-
+                if (!created.ok) {
+                    toast({ variant: 'destructive', title: 'สร้างรายการไม่สำเร็จ', description: created.error });
+                    setIsProcessing(false);
+                    return;
+                }
 
                 setPaymentSuccess(true);
-                if (!isManualTransfer) {
-                    toast({
-                        title: "ชำระเงินสำเร็จ!",
-                        description: 'เราได้ส่งคำขอนัดหมายของคุณไปยังทนายความแล้ว',
-                    });
 
-                    // Send Email Notification for Appointment (Instant)
-                    // (Assuming there was email logic here, otherwise add it if needed, but for now focus on blocking manual)
-                } else {
-                    // Notify Admin for Manual Payment (Appointment) - removed
+                // ไม่ส่งอีเมล "มีเคสใหม่" ให้ทนายตรงนี้แล้ว — ห้องเพิ่งเป็น pending_payment
+                // ยังไม่มีใครตรวจสลิป ทนายจะได้อีเมลเคสที่อาจไม่เคยจ่ายจริง อีเมลแจ้งทนาย
+                // ส่งตอนแอดมินอนุมัติสลิป (approvePaymentSlipAction → notifyPaymentCompletedAction
+                // ใน lawslane-admin)
+
+            } else if (paymentType === 'appointment' && dateStr) {
+                const created = await createAppointment({
+                    lawyerId: lawyer.id,
+                    appointmentDate: dateStr,
+                    description,
+                    slipUrl,
+                    couponCode: appliedCoupon?.code || undefined,
+                });
+
+                if (!created.ok) {
+                    toast({ variant: 'destructive', title: 'สร้างนัดหมายไม่สำเร็จ', description: created.error });
+                    setIsProcessing(false);
+                    return;
                 }
 
-                if (serverPrice?.couponId) {
-                    const redeemed = await redeemCoupon(serverPrice.couponId);
-                    if (!redeemed.ok) console.error('redeemCoupon failed:', redeemed.error);
-                }
+                setPaymentSuccess(true);
+
             } else if (paymentType === 'additional' && chatId) {
-                console.log("Processing additional fee payment for chat:", chatId);
-                const chatRef = doc(firestore, 'chats', chatId);
-
-                // Get current amount to add to it
-                const chatSnap = await getDoc(chatRef);
-                const currentAmount = chatSnap.exists() ? (chatSnap.data().amount || 0) : 0;
-
-                await updateDoc(chatRef, {
-                    amount: currentAmount + finalFee,
-                    pendingFeeRequest: null, // Clear the request
-                    lastPaymentAt: serverTimestamp(),
-                    hasNewPayment: true
+                const paid = await payAdditionalFee({
+                    chatId,
+                    slipUrl,
+                    couponCode: appliedCoupon?.code || undefined,
                 });
 
-                // Create a system message in the chat
-                const messagesRef = collection(chatRef, 'messages');
-                await addDoc(messagesRef, {
-                    text: `💳 ลูกความได้ชำระค่าบริการเพิ่มเติมจำนวน ฿${finalFee.toLocaleString()} เรียบร้อยแล้ว`,
-                    senderId: 'system',
-                    timestamp: serverTimestamp(),
-                });
+                if (!paid.ok) {
+                    toast({ variant: 'destructive', title: 'บันทึกการชำระเงินไม่สำเร็จ', description: paid.error });
+                    setIsProcessing(false);
+                    return;
+                }
 
                 toast({
-                    title: "ชำระเงินสำเร็จ!",
-                    description: 'ค่าบริการถูกเพิ่มเข้าไปใน Escrow เรียบร้อยแล้ว',
+                    title: "แจ้งชำระเงินสำเร็จ!",
+                    description: 'ระบบได้รับสลิปของคุณแล้ว รอแอดมินตรวจสอบ',
                 });
-
-                if (isManualTransfer) {
-                    setPaymentSuccess(true);
-                } else {
-                    router.push(`/chat/${chatId}?lawyerId=${lawyerId}`);
-                }
+                setPaymentSuccess(true);
             }
         } catch (error) {
             console.error("Payment processing error:", error);
