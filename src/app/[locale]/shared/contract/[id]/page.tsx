@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { contractService, ContractData } from '@/services/contractService';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
+import { contractService } from '@/services/contractService';
+import { OtpSignDialog } from '@/components/contract/otp-sign-dialog';
 import { FadeIn } from '@/components/fade-in';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,16 +17,6 @@ import {
     DialogTitle, 
     DialogDescription 
 } from "@/components/ui/dialog";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { 
     FileSignature, 
@@ -60,59 +51,105 @@ const getContractLabels = (category: string = 'other') => {
     }
 };
 
+type SharedParty = {
+    name: string;
+    id_card: string;
+    address: string;
+    signature: string | null;
+    signedAt: string | null;
+    verifiedPhoneNumber: string | null;
+};
+
+type SharedContract = {
+    id: string;
+    title: string;
+    category: string;
+    status: string;
+    employer: SharedParty;
+    contractor: SharedParty;
+    task: string;
+    price: number;
+    deposit: number;
+    deadline: string;
+    paymentTerms: string;
+    attachments: { name: string; type: string; href: string | null }[];
+    createdAt: string | null;
+};
+
+/**
+ * หน้าที่คู่สัญญาเปิดจากลิงก์แชร์ (ไม่ต้องล็อกอิน)
+ * ข้อมูลมาจาก /api/shared/contract/[id] ซึ่งตรวจ token + PIN ฝั่ง server
+ * เดิมอ่าน Firestore ตรง (rules ปฏิเสธ) และเทียบ PIN plaintext ในเบราว์เซอร์
+ */
 export default function SharedContractPage() {
     const params = useParams();
+    const searchParams = useSearchParams();
     const id = params.id as string;
+    const token = searchParams.get('t') ?? '';
 
-    const [contract, setContract] = useState<ContractData | null>(null);
+    const [contract, setContract] = useState<SharedContract | null>(null);
     const [loading, setLoading] = useState(true);
-    const [isPinVerified, setIsPinVerified] = useState(false);
+    const [notFoundMessage, setNotFoundMessage] = useState<string | null>(null);
+    const [needsPin, setNeedsPin] = useState(false);
+    const [verifiedPin, setVerifiedPin] = useState<string | undefined>(undefined);
     const [pinInput, setPinInput] = useState('');
-    const [pinError, setPinError] = useState(false);
-    
+    const [pinError, setPinError] = useState<string | null>(null);
+    const [isCheckingPin, setIsCheckingPin] = useState(false);
+
     const [signingRole, setSigningRole] = useState<'employer' | 'contractor' | null>(null);
     const [isSignDialogOpen, setIsSignDialogOpen] = useState(false);
     const [showConfirmSign, setShowConfirmSign] = useState(false);
     const [pendingSignature, setPendingSignature] = useState<string | null>(null);
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
+    /** คืน null ถ้าสำเร็จ หรือ { code, error } */
+    const loadContract = useCallback(async (pin?: string) => {
+        const res = await fetch(`/api/shared/contract/${encodeURIComponent(id)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, pin }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (res.ok && body?.contract) {
+            setContract(body.contract);
+            setNeedsPin(false);
+            setVerifiedPin(pin);
+            return null;
+        }
+        return { code: body?.code as string | undefined, error: (body?.error as string) || 'ไม่สามารถโหลดสัญญาได้' };
+    }, [id, token]);
+
     useEffect(() => {
         if (!id) return;
-
-        // Fetch initial data to check PIN requirement
-        const fetchContract = async () => {
+        (async () => {
             try {
-                const data = await contractService.getContract(id);
-                setContract(data);
-                
-                // If not PIN protected, verify immediately
-                if (data && !data.isPinProtected) {
-                    setIsPinVerified(true);
+                const failure = await loadContract();
+                if (failure) {
+                    if (failure.code === 'pin_required') setNeedsPin(true);
+                    else if (failure.code === 'pin_locked') { setNeedsPin(true); setPinError(failure.error); }
+                    else setNotFoundMessage(failure.error);
                 }
             } catch (error) {
                 console.error('Failed to fetch contract:', error);
+                setNotFoundMessage('ไม่สามารถโหลดสัญญาได้ กรุณาลองใหม่อีกครั้ง');
             } finally {
                 setLoading(false);
             }
-        };
+        })();
+    }, [id, loadContract]);
 
-        fetchContract();
-
-        // Subscribe for real-time updates (signatures, etc.)
-        const unsubscribe = contractService.subscribeToContract(id, (data) => {
-            setContract(data);
-        });
-
-        return () => unsubscribe();
-    }, [id]);
-
-    const handleVerifyPin = () => {
-        if (contract && pinInput === contract.sharePin) {
-            setIsPinVerified(true);
-            setPinError(false);
-        } else {
-            setPinError(true);
-            setPinInput('');
+    const handleVerifyPin = async () => {
+        setIsCheckingPin(true);
+        try {
+            const failure = await loadContract(pinInput);
+            if (failure) {
+                setPinError(failure.code === 'pin_invalid' ? 'รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง' : failure.error);
+                setPinInput('');
+            } else {
+                setPinError(null);
+            }
+        } finally {
+            setIsCheckingPin(false);
         }
     };
 
@@ -121,18 +158,12 @@ export default function SharedContractPage() {
         setShowConfirmSign(true);
     };
 
-    const handleConfirmSign = async () => {
-        if (!signingRole || !contract || !pendingSignature) return;
-
-        try {
-            await contractService.signContract(id, signingRole, pendingSignature);
-            setIsSignDialogOpen(false);
-            setShowConfirmSign(false);
-            setPendingSignature(null);
-        } catch (error) {
-            console.error('Error signing contract:', error);
-            alert("ไม่สามารถบันทึกลายเซ็นได้ กรุณาลองใหม่อีกครั้ง");
-        }
+    const handleVerifiedSign = async (phoneIdToken: string) => {
+        if (!signingRole || !pendingSignature) throw new Error('ไม่พบลายเซ็น กรุณาเซ็นใหม่อีกครั้ง');
+        await contractService.signContract(id, signingRole, pendingSignature, phoneIdToken, { token, pin: verifiedPin });
+        setIsSignDialogOpen(false);
+        setPendingSignature(null);
+        await loadContract(verifiedPin);
     };
 
     const handleDownloadPDF = async () => {
@@ -164,20 +195,20 @@ export default function SharedContractPage() {
         );
     }
 
-    if (!contract) {
+    if (!contract && !needsPin) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
                 <div className="text-center space-y-4 max-w-md">
                     <AlertTriangle className="w-16 h-16 text-red-500 mx-auto" />
                     <h1 className="text-2xl font-bold text-slate-800">ไม่พบสัญญา</h1>
-                    <p className="text-slate-600">สัญญานี้อาจถูกลบหรือลิงก์ไม่ถูกต้อง กรุณาติดต่อเจ้าของสัญญา</p>
+                    <p className="text-slate-600">{notFoundMessage || 'สัญญานี้อาจถูกลบหรือลิงก์ไม่ถูกต้อง'} กรุณาติดต่อเจ้าของสัญญาเพื่อขอลิงก์ใหม่</p>
                 </div>
             </div>
         );
     }
 
     // PIN Verification View
-    if (!isPinVerified) {
+    if (needsPin || !contract) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
                 <FadeIn>
@@ -199,17 +230,17 @@ export default function SharedContractPage() {
                                     value={pinInput}
                                     onChange={(e) => {
                                         setPinInput(e.target.value.replace(/\D/g, ''));
-                                        setPinError(false);
+                                        setPinError(null);
                                     }}
                                     className={`text-center text-3xl tracking-[1em] h-16 rounded-2xl border-2 ${pinError ? 'border-red-300 bg-red-50' : 'border-slate-100 focus:border-blue-500'}`}
                                 />
                                 {pinError && (
-                                    <p className="text-red-500 text-sm text-center font-medium animate-shake">รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง</p>
+                                    <p className="text-red-500 text-sm text-center font-medium animate-shake">{pinError}</p>
                                 )}
                             </div>
                             <Button 
                                 onClick={handleVerifyPin}
-                                disabled={pinInput.length !== 4}
+                                disabled={pinInput.length !== 4 || isCheckingPin}
                                 className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white text-lg font-bold rounded-2xl shadow-lg shadow-blue-200 transition-all active:scale-95"
                             >
                                 เข้าดูสัญญา
@@ -306,7 +337,8 @@ export default function SharedContractPage() {
                                             {contract.attachments.map((file, idx) => (
                                                 <a 
                                                     key={idx}
-                                                    href={`/api/share/contract/file?contractId=${contract.id}&fileUrl=${encodeURIComponent(file.url)}${contract.isPinProtected ? `&pin=${contract.sharePin}` : ''}`}
+                                                    // URL ลงนามชั่วคราว 10 นาทีจาก server — ไม่ส่ง PIN ไปใน URL อีกต่อไป
+                                                    href={file.href ?? undefined}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="flex items-center p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-blue-200 hover:bg-blue-50 transition-all group"
@@ -397,26 +429,15 @@ export default function SharedContractPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Confirmation Dialog */}
-            <AlertDialog open={showConfirmSign} onOpenChange={setShowConfirmSign}>
-                <AlertDialogContent className="bg-white border-none shadow-2xl rounded-3xl">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="text-xl font-bold">ยืนยันการเซ็นชื่อ</AlertDialogTitle>
-                        <AlertDialogDescription className="text-slate-600">
-                            ลายเซ็นนี้จะมีผลผูกพันทางกฎหมายและไม่สามารถแก้ไขได้ คุณต้องการดำเนินการต่อใช่หรือไม่?
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter className="mt-6">
-                        <AlertDialogCancel className="rounded-xl border-slate-100">ยกเลิก</AlertDialogCancel>
-                        <AlertDialogAction 
-                            onClick={handleConfirmSign}
-                            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-8 font-bold"
-                        >
-                            ยืนยันและเซ็นสัญญา
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            {/* OTP ก่อนบันทึกลายเซ็น */}
+            <OtpSignDialog
+                open={showConfirmSign}
+                onOpenChange={(open) => {
+                    setShowConfirmSign(open);
+                    if (!open) setPendingSignature(null);
+                }}
+                onVerified={handleVerifiedSign}
+            />
         </div>
     );
 }

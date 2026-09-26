@@ -51,7 +51,25 @@ function formatThaiDate(date: Date): string {
 
 // Format currency
 function formatCurrency(amount: number): string {
-    return amount.toLocaleString('th-TH');
+    return (Number(amount) || 0).toLocaleString('th-TH');
+}
+
+/**
+ * template ด้านล่างถูกใส่ลง innerHTML — ทุกค่าที่มาจากผู้ใช้หรือ AI ต้อง escape
+ * เดิมใส่ตรงๆ ชื่อหรือขอบเขตงานที่มี <img onerror=...> จึงรันสคริปต์บนโดเมน capdeal ได้
+ */
+function esc(value: unknown): string {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+/** ลายเซ็นต้องเป็น PNG data URL ที่ SignaturePad สร้างเท่านั้น */
+function safeSignature(value: unknown): string | null {
+    return typeof value === 'string' && /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(value) ? value : null;
 }
 
 // Helper to show value or blank placeholder
@@ -64,15 +82,17 @@ function valueOrBlank(value: string | undefined, placeholder = '________________
 
 export async function generateContractPDF(data: ContractData) {
     // Normalize data
-    const employerName = typeof data.employer === 'string' ? data.employer : data.employer?.name;
-    const employerId = typeof data.employer === 'string' ? data.employerId : (data.employer?.id_card || data.employerId);
-    const employerAddress = typeof data.employer === 'string' ? data.employerAddress : (data.employer?.address || data.employerAddress);
-    const employerSignature = typeof data.employer === 'object' ? data.employer?.signature : null;
+    // ค่าทั้งหมดด้านล่าง escape แล้ว พร้อมใส่ลง HTML
+    const rawEmployerName = typeof data.employer === 'string' ? data.employer : data.employer?.name;
+    const employerName = esc(rawEmployerName);
+    const employerId = esc(typeof data.employer === 'string' ? data.employerId : (data.employer?.id_card || data.employerId));
+    const employerAddress = esc(typeof data.employer === 'string' ? data.employerAddress : (data.employer?.address || data.employerAddress));
+    const employerSignature = typeof data.employer === 'object' ? safeSignature(data.employer?.signature) : null;
 
-    const contractorName = typeof data.contractor === 'string' ? data.contractor : data.contractor?.name;
-    const contractorId = typeof data.contractor === 'string' ? data.contractorId : (data.contractor?.id_card || data.contractorId);
-    const contractorAddress = typeof data.contractor === 'string' ? data.contractorAddress : (data.contractor?.address || data.contractorAddress);
-    const contractorSignature = typeof data.contractor === 'object' ? data.contractor?.signature : null;
+    const contractorName = esc(typeof data.contractor === 'string' ? data.contractor : data.contractor?.name);
+    const contractorId = esc(typeof data.contractor === 'string' ? data.contractorId : (data.contractor?.id_card || data.contractorId));
+    const contractorAddress = esc(typeof data.contractor === 'string' ? data.contractorAddress : (data.contractor?.address || data.contractorAddress));
+    const contractorSignature = typeof data.contractor === 'object' ? safeSignature(data.contractor?.signature) : null;
 
     const sharedStyles = `
         font-family: 'Sarabun', sans-serif;
@@ -125,21 +145,21 @@ export async function generateContractPDF(data: ContractData) {
 
             <div style="margin-left: 30px; margin-bottom: 20px;">
                 <p><strong>ข้อ 1. ขอบเขตของงาน</strong></p>
-                <p style="padding-left: 30px; border-left: 2px solid #e2e8f0; color: #334155;">${data.task}</p>
+                <p style="padding-left: 30px; border-left: 2px solid #e2e8f0; color: #334155;">${esc(data.task)}</p>
             </div>
 
             <div style="margin-left: 30px; margin-bottom: 20px;">
                 <p><strong>ข้อ 2. ค่าจ้างและเงื่อนไขการชำระเงิน</strong></p>
                 <p style="padding-left: 30px;">
                     ${getContractLabels(data.category).p1}ตกลงชำระค่าจ้างเป็นจำนวนเงินทั้งสิ้น <strong>${formatCurrency(data.price)} บาท</strong>
-                    ${data.deposit > 0 ? `<br />- มัดจำ: <strong>${formatCurrency(data.deposit)} บาท</strong>` : ''}
-                    <br />- เงื่อนไขการชำระเงิน: ${data.paymentTerms || 'ตามตกลงกัน'}
+                    ${Number(data.deposit) > 0 ? `<br />- มัดจำ: <strong>${formatCurrency(data.deposit)} บาท</strong>` : ''}
+                    <br />- เงื่อนไขการชำระเงิน: ${esc(data.paymentTerms || 'ตามตกลงกัน')}
                 </p>
             </div>
 
             <div style="margin-left: 30px;">
                 <p><strong>ข้อ 3. กำหนดเวลาและสถานที่ส่งมอบงาน</strong></p>
-                <p style="padding-left: 30px;">${getContractLabels(data.category).p2}ตกลงจะทำงานให้แล้วเสร็จภายใน <strong>${data.deadline}</strong></p>
+                <p style="padding-left: 30px;">${getContractLabels(data.category).p2}ตกลงจะทำงานให้แล้วเสร็จภายใน <strong>${esc(data.deadline)}</strong></p>
             </div>
         </div>
         <div style="position: absolute; bottom: 40px; width: 100%; left: 0; text-align: center; font-size: 11px; color: #cbd5e1;">Page 1 of 2</div>
@@ -163,7 +183,7 @@ export async function generateContractPDF(data: ContractData) {
             <div style="margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
                 <p style="font-weight: bold; margin-bottom: 15px;">เอกสารแนบท้ายสัญญา:</p>
                 <ul style="padding-left: 20px;">
-                    ${data.attachments.map(file => `<li style="margin-bottom: 5px;">${file.name}</li>`).join('')}
+                    ${data.attachments.map(file => `<li style="margin-bottom: 5px;">${esc(file.name)}</li>`).join('')}
                 </ul>
             </div>
             ` : ''}
@@ -229,7 +249,7 @@ export async function generateContractPDF(data: ContractData) {
         const imgData2 = canvas2.toDataURL('image/png');
         pdf.addImage(imgData2, 'PNG', 0, 0, 210, 297);
 
-        pdf.save(`contract-${employerName || 'legal'}-${Date.now()}.pdf`);
+        pdf.save(`contract-${(rawEmployerName || 'legal').replace(/[\\/:*?"<>|]/g, '_')}-${Date.now()}.pdf`);
     } catch (error) {
         console.error('PDF Generation Error:', error);
         alert('เกิดข้อผิดพลาดในการสร้าง PDF กรุณาลองใหม่อีกครั้ง');

@@ -56,9 +56,27 @@ export interface ContractData {
     createdAt: Timestamp;
     updatedAt: Timestamp;
 
-    // Sharing & Security
+    // Sharing & Security — token / PIN hash เขียนโดย server เท่านั้น
     isPinProtected?: boolean;
+    shareToken?: string;
+    /** @deprecated PIN แบบ plaintext ของเดิม — server ลบทิ้งเมื่อสร้างลิงก์ใหม่ */
     sharePin?: string;
+    signedTermsHash?: string;
+}
+
+/**
+ * สัญญาจ้างทนายที่เว็บหลักสร้าง (lib/contract-service.ts) ไม่มี employer/contractor
+ * แต่โผล่ใน dashboard นี้เพราะ query ด้วย userId — เติมค่าว่างกันหน้า crash
+ */
+export function normalizeContract(raw: any): ContractData {
+    return {
+        ...raw,
+        employer: raw?.employer ?? { name: raw?.clientName ?? '' },
+        contractor: raw?.contractor ?? { name: raw?.lawyerName ?? '' },
+        task: raw?.task ?? '',
+        price: Number(raw?.price ?? 0),
+        deadline: raw?.deadline ?? '',
+    } as ContractData;
 }
 
 const COLLECTION_NAME = 'contracts';
@@ -110,58 +128,49 @@ export const contractService = {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-            return docSnap.data() as ContractData;
+            return normalizeContract(docSnap.data());
         } else {
             return null;
         }
     },
 
-    // Sign a contract
-    async signContract(id: string, role: 'employer' | 'contractor', signature: string, otpMetadata?: { verifiedPhoneNumber: string, authUid: string }) {
-        const { firestore } = initializeFirebase();
-        if (!firestore) throw new Error('Firestore not initialized');
-
-        const docRef = doc(firestore, COLLECTION_NAME, id);
-        const now = Timestamp.now();
-
-        const updates: any = {
-            [`${role}.signature`]: signature,
-            [`${role}.signedAt`]: now,
-            updatedAt: now
-        };
-
-        if (otpMetadata) {
-            updates[`${role}.verifiedPhoneNumber`] = otpMetadata.verifiedPhoneNumber;
-            updates[`${role}.otpVerificationTimestamp`] = now;
-            updates[`${role}.authUid`] = otpMetadata.authUid;
+    // Sign a contract — ทำฝั่ง server เท่านั้น (ดู api/contracts/[id]/sign)
+    // share = { token, pin } เมื่อเซ็นผ่านลิงก์แชร์โดยไม่ได้เป็นเจ้าของ
+    async signContract(
+        id: string,
+        role: 'employer' | 'contractor',
+        signature: string,
+        phoneIdToken: string,
+        share?: { token: string; pin?: string },
+    ) {
+        const res = await fetch(`/api/contracts/${encodeURIComponent(id)}/sign`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role, signature, phoneIdToken, ...share }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            throw new Error(body?.error || 'บันทึกลายเซ็นไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
         }
-
-        // Update successful
-        await updateDoc(docRef, updates);
-
-        // Check if both signed to update status
-        const currentDoc = await getDoc(docRef);
-        const data = currentDoc.data() as ContractData;
-
-        if (data.employer.signature && data.contractor.signature) {
-            await updateDoc(docRef, {
-                status: 'signed',
-                updatedAt: now
-            });
-        }
+        return body as { ok: true; status: 'pending' | 'signed' };
     },
 
     // Real-time subscription
-    subscribeToContract(id: string, callback: (data: ContractData) => void) {
+    subscribeToContract(
+        id: string,
+        callback: (data: ContractData | null) => void,
+        onError?: (error: Error) => void,
+    ) {
         const { firestore } = initializeFirebase();
         if (!firestore) return () => { };
 
         const docRef = doc(firestore, COLLECTION_NAME, id);
-        return onSnapshot(docRef, (doc) => {
-            if (doc.exists()) {
-                callback(doc.data() as ContractData);
-            }
-        });
+        return onSnapshot(
+            docRef,
+            (snap) => callback(snap.exists() ? normalizeContract(snap.data()) : null),
+            // ไม่มีสิทธิ์อ่าน (ไม่ใช่เจ้าของ / ยังไม่ล็อกอิน) — เดิมไม่มี error callback หน้าเลยหมุนโหลดไม่จบ
+            (error) => onError?.(error),
+        );
     },
 
     // Update contract status
@@ -260,20 +269,19 @@ export const contractService = {
         });
     },
 
-    // Generate share link and update protection settings
+    // สร้าง/รีเซ็ตลิงก์แชร์ — token และ PIN hash สร้างฝั่ง server (ดู api/contracts/[id]/share)
+    // ทุกครั้งที่เรียกจะได้ลิงก์ใหม่ ลิงก์เก่าใช้ไม่ได้
     async generateShareLink(id: string, isPinProtected: boolean, sharePin?: string) {
-        const { firestore } = initializeFirebase();
-        if (!firestore) throw new Error('Firestore not initialized');
-
-        const docRef = doc(firestore, COLLECTION_NAME, id);
-        const now = serverTimestamp();
-
-        await updateDoc(docRef, {
-            isPinProtected,
-            sharePin: sharePin || null,
-            updatedAt: now
+        const res = await fetch(`/api/contracts/${encodeURIComponent(id)}/share`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ isPinProtected, pin: sharePin }),
         });
-
-        return `${window.location.origin}/shared/contract/${id}`;
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok || !body?.path) {
+            throw new Error(body?.error || 'ไม่สามารถสร้างลิงก์แชร์ได้');
+        }
+        const locale = window.location.pathname.split('/')[1] || 'th';
+        return `${window.location.origin}/${locale}${body.path}`;
     }
 };
