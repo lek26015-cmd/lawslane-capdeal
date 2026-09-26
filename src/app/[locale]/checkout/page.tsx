@@ -61,6 +61,7 @@ function CheckoutContent() {
                 body: JSON.stringify({
                     planId,
                     billingInterval,
+                    locale: window.location.pathname.split('/')[1],
                 }),
             });
 

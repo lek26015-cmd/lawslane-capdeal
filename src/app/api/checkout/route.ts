@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { SUBSCRIPTION_PLANS, PlanId } from '@/lib/subscription';
 import { requireUser, authErrorResponse, safeOrigin } from '@/lib/auth-guard';
+import { isSubscriptionEntitled } from '@/lib/entitlement';
 
 export async function POST(req: NextRequest) {
     try {
@@ -12,12 +13,24 @@ export async function POST(req: NextRequest) {
         // แล้วใส่ลง metadata.userId ซึ่ง webhook เอาไปให้สิทธิ์แพลนตาม uid นั้น
         let userId: string;
         let customerEmail: string | undefined;
+        let adminApp;
         try {
             const session = await requireUser();
             userId = session.uid;
             customerEmail = session.token.email;
+            adminApp = session.adminApp;
         } catch (e) {
             return authErrorResponse(e);
+        }
+
+        // มีแพ็กเกจที่ยังใช้งานอยู่แล้ว → ต้องเปลี่ยนผ่าน Billing Portal
+        // เดิมซื้อซ้ำได้ → 2 subscription ตัวแรกหลุดจากบัญชี ยกเลิกเองไม่ได้แต่ยังโดนตัดเงิน
+        const existing = (await adminApp.firestore().collection('users').doc(userId).get()).data()?.subscription;
+        if (existing?.subscriptionId && isSubscriptionEntitled(existing)) {
+            return NextResponse.json({
+                error: 'คุณมีแพ็กเกจที่ใช้งานอยู่แล้ว กรุณาเปลี่ยนหรือยกเลิกแพ็กเกจที่หน้า "บัญชีของฉัน"',
+                code: 'already_subscribed',
+            }, { status: 409 });
         }
 
         if (!planId) {
@@ -54,16 +67,23 @@ export async function POST(req: NextRequest) {
                 },
             ],
             mode: mode as any,
-            return_url: `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+            return_url: `${origin}/${body.locale === 'en' || body.locale === 'zh' ? body.locale : 'th'}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
             metadata: {
                 userId: userId,
                 planId: planId,
                 billingInterval: billingInterval || 'month',
             },
+            // ให้ event ของ subscription หา user เจอแม้ customerId ในบัญชีเปลี่ยน
+            subscription_data: {
+                metadata: { userId, planId },
+            },
         };
 
-        // Only add customer_email if it's a valid non-empty string
-        if (customerEmail && typeof customerEmail === 'string' && customerEmail.trim() !== '') {
+        // ใช้ Stripe customer เดิมของผู้ใช้ (จากการซื้อครั้งก่อน / บันทึกบัตรไว้)
+        // เดิมสร้าง customer ใหม่ทุกครั้ง บัตรที่บันทึกไว้จึงไปอยู่คนละ customer
+        if (existing?.customerId) {
+            sessionParams.customer = existing.customerId;
+        } else if (customerEmail && typeof customerEmail === 'string' && customerEmail.trim() !== '') {
             sessionParams.customer_email = customerEmail;
         }
 
