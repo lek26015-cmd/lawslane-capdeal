@@ -434,11 +434,17 @@ export default function ScreenshotToContractPage() {
             });
 
             router.push(`/${locale}/contract/${id}`);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error creating contract:', error);
+            // server ตัดสินโควตา — ตัวเลขใน UI อาจช้ากว่า
+            if (error?.code === 'deal_quota') {
+                toast({ title: "ถึงขีดจำกัดแล้ว", description: error.message, variant: 'destructive' });
+                router.push(`/${locale}/pricing`);
+                return;
+            }
             toast({
                 title: "เกิดข้อผิดพลาด",
-                description: "ไม่สามารถสร้างสัญญาได้ กรุณาลองใหม่อีกครั้ง",
+                description: error?.message || "ไม่สามารถสร้างสัญญาได้ กรุณาลองใหม่อีกครั้ง",
                 variant: 'destructive',
             });
         } finally {
@@ -984,8 +990,13 @@ export default function ScreenshotToContractPage() {
                                                     }
 
                                                     await generateContractPDF(contractData);
-                                                } catch (error) {
+                                                } catch (error: any) {
                                                     console.error('PDF Download Error:', error);
+                                                    toast({
+                                                        title: error?.code === 'deal_quota' ? "ถึงขีดจำกัดแล้ว" : "เกิดข้อผิดพลาด",
+                                                        description: error?.message || "ไม่สามารถสร้างเอกสารได้",
+                                                        variant: 'destructive',
+                                                    });
                                                 } finally {
                                                     setIsDownloadingPDF(false);
                                                 }

@@ -2,7 +2,6 @@ import { initializeFirebase } from '@/firebase';
 import {
     collection,
     doc,
-    setDoc,
     getDoc,
     updateDoc,
     onSnapshot,
@@ -12,7 +11,6 @@ import {
     where,
     getDocs
 } from 'firebase/firestore';
-import { v4 as uuidv4 } from 'uuid';
 
 export interface ContractParty {
     name: string;
@@ -100,23 +98,21 @@ function cleanObject(obj: any): any {
 }
 
 export const contractService = {
-    // Create a new contract
-    async createContract(data: Omit<ContractData, 'id' | 'createdAt' | 'updatedAt'>) {
-        const { firestore } = initializeFirebase();
-        if (!firestore) throw new Error('Firestore not initialized');
-
-        const id = uuidv4();
-        const now = serverTimestamp();
-
-        const contract = cleanObject({
-            ...data,
-            id,
-            createdAt: now,
-            updatedAt: now,
+    // สร้างสัญญาฝั่ง server — ตัดโควตาแพ็กเกจใน transaction เดียวกัน (ดู api/contracts)
+    // throw Error ที่มี code 'deal_quota' เมื่อเกินโควตา
+    async createContract(data: Omit<ContractData, 'id' | 'createdAt' | 'updatedAt' | 'ownerId' | 'status'> & Partial<Pick<ContractData, 'ownerId' | 'status'>>) {
+        const res = await fetch('/api/contracts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
         });
-
-        await setDoc(doc(firestore, COLLECTION_NAME, id), contract);
-        return id;
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok || !body?.id) {
+            const err = new Error(body?.error || 'ไม่สามารถสร้างสัญญาได้') as Error & { code?: string };
+            err.code = body?.code;
+            throw err;
+        }
+        return body.id as string;
     },
 
     // Get a contract by ID

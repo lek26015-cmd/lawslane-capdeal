@@ -2,31 +2,52 @@ import { z } from 'zod';
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { requireUser, authErrorResponse } from '@/lib/auth-guard';
+import { consumeQuota, refundQuota, QuotaError } from '@/lib/entitlement';
 
 // Define the schema using Zod
+// รูปถูกย่อเหลือ ≤1200px JPEG ใน client แล้ว — ลิมิตนี้กันคนยิงตรงด้วยไฟล์ใหญ่ ๆ
+const MAX_IMAGES = 10;
+const MAX_IMAGE_CHARS = 4_000_000; // ~3MB หลัง base64
+
 const RequestSchema = z.object({
-    images: z.array(z.string()).optional(),
-    image: z.string().optional(), // Backwards compatibility
+    images: z.array(z.string().max(MAX_IMAGE_CHARS)).max(MAX_IMAGES).optional(),
+    image: z.string().max(MAX_IMAGE_CHARS).optional(), // Backwards compatibility
     locale: z.string().optional(),
 });
 
 
 export async function POST(req: NextRequest) {
     // ต้องล็อกอินอยู่จริง — endpoint นี้เรียก LLM ซึ่งมีค่าใช้จ่ายต่อครั้ง
+    let session;
     try {
-        await requireUser();
+        session = await requireUser();
     } catch (e) {
         return authErrorResponse(e);
     }
+
+    const parsed = RequestSchema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+        return NextResponse.json({ error: `อัปโหลดได้ไม่เกิน ${MAX_IMAGES} รูป และรูปละไม่เกิน 3MB` }, { status: 400 });
+    }
+    const { images, image, locale = 'th' } = parsed.data;
+    const imageList = images || (image ? [image] : []);
+    if (imageList.length === 0) {
+        return NextResponse.json({ error: 'Image is required' }, { status: 400 });
+    }
+
+    // ตัดโควตาก่อนเรียก AI (ฝั่ง server) — เดิมเช็คแค่ใน UI ยิงตรงได้ไม่จำกัด
+    const db = session.adminApp.firestore();
     try {
-        const body = await req.json();
-        const { images, image, locale = 'th' } = RequestSchema.parse(body);
-
-        const imageList = images || (image ? [image] : []);
-
-        if (imageList.length === 0) {
-            return NextResponse.json({ error: 'Image is required' }, { status: 400 });
+        await consumeQuota(db, session.uid, 'scans');
+    } catch (e) {
+        if (e instanceof QuotaError) {
+            return NextResponse.json({ error: e.message, code: e.code }, { status: e.status });
         }
+        console.error('SCAN_QUOTA_ERROR', e);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
+
+    try {
 
         const language = locale === 'en' ? 'English' : 'Thai';
 
@@ -114,6 +135,8 @@ export async function POST(req: NextRequest) {
 
     } catch (error: any) {
         console.error('Contract draft generation error:', error);
+        // AI ล้มเหลวไม่ใช่ความผิดผู้ใช้ — คืนโควตา
+        await refundQuota(db, session.uid, 'scans').catch(() => {});
         return NextResponse.json(
             { error: error.message || 'Failed to process image' },
             { status: 500 }
