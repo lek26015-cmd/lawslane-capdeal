@@ -216,6 +216,7 @@ export default function ContractSigningPage() {
             router.push(`/${(params.locale as string) || 'th'}/contract/${newContractId}`);
         } catch (error) {
             console.error('Failed to create revision:', error);
+            alert(error instanceof Error ? error.message : 'ไม่สามารถสร้างฉบับแก้ไขได้');
             setIsCreatingRevision(false);
         }
     };
@@ -253,7 +254,8 @@ export default function ContractSigningPage() {
 
         } catch (error) {
             console.error("Failed to upload attachment:", error);
-            alert("ไม่สามารถอัปโหลดไฟล์ได้ กรุณาลองใหม่อีกครั้ง");
+            // server action ซ่อนข้อความ error ใน production — แสดงข้อความกลาง ๆ
+            alert("ไม่สามารถอัปโหลดไฟล์ได้ (แนบเอกสารได้เฉพาะแพ็กเกจ Lite ขึ้นไป) กรุณาลองใหม่อีกครั้ง");
         } finally {
             setIsUploading(false);
             // Reset input so the same file can be selected again if needed

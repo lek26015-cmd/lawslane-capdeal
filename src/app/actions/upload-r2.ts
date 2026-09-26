@@ -3,6 +3,7 @@
 import { r2 } from '@/lib/r2';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { requireUser } from '@/lib/auth-guard';
+import { getUsageSummary } from '@/lib/entitlement';
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10MB
 
@@ -22,7 +23,7 @@ const ALLOWED_FOLDER_PATTERNS: RegExp[] = [
 
 export async function uploadToR2(formData: FormData, folder: string = 'uploads') {
     // ต้องล็อกอินอยู่จริง — เดิมใครก็ยิง server action นี้อัปไฟล์ขึ้น R2 ของเราได้
-    await requireUser();
+    const session = await requireUser();
 
     const file = formData.get('file') as File;
     if (!file) {
@@ -31,6 +32,19 @@ export async function uploadToR2(formData: FormData, folder: string = 'uploads')
 
     if (!ALLOWED_FOLDER_PATTERNS.some((re) => re.test(folder))) {
         throw new Error('Invalid upload destination');
+    }
+
+    // ไฟล์แนบท้ายสัญญา: เฉพาะเจ้าของสัญญา และเฉพาะแพ็กเกจที่จ่ายเงิน (เดิมเช็คแค่ใน UI)
+    const contractMatch = folder.match(/^contracts\/([A-Za-z0-9_-]+)\/attachments$/);
+    if (contractMatch) {
+        const db = session.adminApp.firestore();
+        const contractSnap = await db.collection('contracts').doc(contractMatch[1]).get();
+        if (!contractSnap.exists || contractSnap.data()?.ownerId !== session.uid) {
+            throw new Error('Invalid upload destination');
+        }
+        if (!(await getUsageSummary(db, session.uid)).isPaid) {
+            throw new Error('กรุณาอัปเกรดแพ็กเกจเพื่อแนบเอกสารท้ายสัญญา');
+        }
     }
 
     if (file.size > MAX_UPLOAD_BYTES) {
