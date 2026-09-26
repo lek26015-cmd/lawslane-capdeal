@@ -26,23 +26,13 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { SignaturePad } from '@/components/ui/signature-pad';
 import { FileSignature, AlertTriangle, Shield, CheckCircle, Edit, Plus, Calendar, User, Download, Link as LinkIcon, Share2, Loader2, Paperclip, Lock, FileText, Trash2, Eye, X, PenTool, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { generateContractPDF } from '@/lib/contract-pdf';
-import { useUser, initializeFirebase } from '@/firebase';
-import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
+import { useUser } from '@/firebase';
+import { OtpSignDialog } from '@/components/contract/otp-sign-dialog';
 import { useSubscription } from '@/hooks/useSubscription';
 import { uploadToR2 } from '@/app/actions/upload-r2';
 
@@ -68,13 +58,14 @@ export default function ContractSigningPage() {
     const id = params.id as string;
 
     // Auth & Subscription
-    const { user } = useUser();
+    const { user, isUserLoading } = useUser();
     const { isActive, isLoading: isSubLoading, planId } = useSubscription();
 
     const hideWatermark = planId && planId !== 'free';
 
     const [contract, setContract] = useState<ContractData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [accessDenied, setAccessDenied] = useState(false);
     const [signingRole, setSigningRole] = useState<'employer' | 'contractor' | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -93,14 +84,6 @@ export default function ContractSigningPage() {
     const [pendingSignature, setPendingSignature] = useState<string | null>(null);
     const [showESignInfo, setShowESignInfo] = useState(false);
     
-    // OTP states
-    const [phoneNumber, setPhoneNumber] = useState('');
-    const [otpCode, setOtpCode] = useState('');
-    const [isSendingOtp, setIsSendingOtp] = useState(false);
-    const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
-    const [showOtpInput, setShowOtpInput] = useState(false);
-    const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
-    
     // Share Dialog states
     const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
     const [shareIsPinProtected, setShareIsPinProtected] = useState(true);
@@ -109,32 +92,32 @@ export default function ContractSigningPage() {
     const [isGeneratingShare, setIsGeneratingShare] = useState(false);
 
     useEffect(() => {
-        if (!id) return;
+        // รอ auth ก่อน ไม่งั้น snapshot แรกโดน rules ปฏิเสธแล้วขึ้น "ไม่มีสิทธิ์" ชั่วครู่
+        if (!id || isUserLoading) return;
+        setLoading(true);
 
-        const unsubscribe = contractService.subscribeToContract(id, (data) => {
-            setContract(data);
-            setLoading(false);
-        });
-
-        // Initialize RecaptchaVerifier
-        const { auth } = initializeFirebase();
-        if (auth && typeof window !== 'undefined' && !(window as any).recaptchaVerifier) {
-            try {
-                (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-                    size: 'invisible',
-                });
-            } catch (error) {
-                console.error("Recaptcha init error:", error);
-            }
-        }
+        const unsubscribe = contractService.subscribeToContract(
+            id,
+            (data) => {
+                setContract(data);
+                setAccessDenied(false);
+                setLoading(false);
+            },
+            () => {
+                // rules ให้อ่านได้เฉพาะเจ้าของ — คู่สัญญาต้องเปิดผ่านลิงก์แชร์
+                setAccessDenied(true);
+                setLoading(false);
+            },
+        );
 
         return () => unsubscribe();
-    }, [id]);
+    }, [id, user?.uid, isUserLoading]);
 
     const handleShare = () => {
         // Initialize share settings from current contract if they exist
         setShareIsPinProtected(contract?.isPinProtected ?? true);
-        setSharePinValue(contract?.sharePin || '');
+        // PIN เก็บเป็น hash แล้ว — ตั้งใหม่ทุกครั้งที่สร้างลิงก์
+        setSharePinValue('');
         setShareLink('');
         setIsShareDialogOpen(true);
     };
@@ -162,7 +145,7 @@ export default function ContractSigningPage() {
             setTimeout(() => setCopied(false), 2000);
         } catch (error) {
             console.error('Failed to generate share link:', error);
-            alert('ไม่สามารถสร้างลิงก์แชร์ได้');
+            alert(error instanceof Error ? error.message : 'ไม่สามารถสร้างลิงก์แชร์ได้');
         } finally {
             setIsGeneratingShare(false);
         }
@@ -172,7 +155,26 @@ export default function ContractSigningPage() {
         if (!contract || !editData) return;
         setIsSavingEdit(true);
         try {
-            await contractService.updateContract(contract.id, editData);
+            // ส่งเฉพาะฟิลด์เงื่อนไขสัญญา — เดิมส่งทั้งเอกสาร (รวม createdAt / ownerId / ลิงก์แชร์)
+            // cleanObject แปลง Timestamp เป็น map ทำให้ createdAt เพี้ยน และ rules ใหม่ปฏิเสธทั้งก้อน
+            const party = (p?: ContractData['employer']) => ({
+                name: p?.name ?? '',
+                email: p?.email,
+                id_card: p?.id_card,
+                address: p?.address,
+            });
+            await contractService.updateContract(contract.id, {
+                title: editData.title,
+                category: editData.category,
+                notes: editData.notes,
+                employer: party(editData.employer),
+                contractor: party(editData.contractor),
+                task: editData.task,
+                price: Number(editData.price ?? 0),
+                deposit: Number(editData.deposit ?? 0),
+                deadline: editData.deadline,
+                paymentTerms: editData.paymentTerms,
+            });
             setIsEditing(false);
         } catch (error) {
             console.error('Failed to update contract:', error);
@@ -187,25 +189,31 @@ export default function ContractSigningPage() {
 
         try {
             // Create a new contract based on the current one but without signatures
+            // คัดเฉพาะเงื่อนไขสัญญา — ไม่พาลายเซ็น, หลักฐาน OTP, ลิงก์แชร์ หรือ hash ของฉบับเดิมมาด้วย
+            const partyTerms = (p: ContractData['employer']) => ({
+                name: p?.name ?? '',
+                email: p?.email,
+                id_card: p?.id_card,
+                address: p?.address,
+            });
             const newContractId = await contractService.createContract({
-                ...contract,
                 title: `${contract.title || 'สัญญาจ้างทำของ'} (ฉบับแก้ไข)`,
+                category: contract.category,
+                notes: contract.notes,
+                attachments: contract.attachments,
                 task: `${contract.task}\n\n(อ้างอิงและแก้ไขจากสัญญาฉบับเดิม: #${contract.id.slice(0, 8).toUpperCase()})`,
-                status: 'pending',
-                employer: {
-                    ...contract.employer,
-                    signature: undefined,
-                    signedAt: undefined
-                },
-                contractor: {
-                    ...contract.contractor,
-                    signature: undefined,
-                    signedAt: undefined
-                }
+                price: contract.price,
+                deposit: contract.deposit,
+                deadline: contract.deadline,
+                paymentTerms: contract.paymentTerms,
+                status: 'draft',
+                ownerId: contract.ownerId,
+                employer: partyTerms(contract.employer),
+                contractor: partyTerms(contract.contractor),
             });
 
             // Redirect to the new contract
-            router.push(`/th/contract/${newContractId}`);
+            router.push(`/${(params.locale as string) || 'th'}/contract/${newContractId}`);
         } catch (error) {
             console.error('Failed to create revision:', error);
             setIsCreatingRevision(false);
@@ -272,68 +280,11 @@ export default function ContractSigningPage() {
         setShowConfirmSign(true);
     };
 
-    const formatPhoneNumber = (phone: string) => {
-        let formatted = phone.replace(/\D/g, '');
-        if (formatted.startsWith('0')) {
-            formatted = '+66' + formatted.substring(1);
-        } else if (!formatted.startsWith('+')) {
-            formatted = '+' + formatted;
-        }
-        return formatted;
-    };
-
-    const handleSendOtp = async () => {
-        if (!phoneNumber || phoneNumber.length < 9) {
-            alert("กรุณาระบุหมายเลขโทรศัพท์ที่ถูกต้อง");
-            return;
-        }
-
-        const { auth } = initializeFirebase();
-        if (!auth) return;
-
-        setIsSendingOtp(true);
-        try {
-            const formattedPhone = formatPhoneNumber(phoneNumber);
-            const appVerifier = (window as any).recaptchaVerifier;
-            const confirmation = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
-            setConfirmationResult(confirmation);
-            setShowOtpInput(true);
-        } catch (error) {
-            console.error('Error sending OTP:', error);
-            alert("ไม่สามารถส่ง OTP ได้ กรุณาตรวจสอบหมายเลขโทรศัพท์และลองใหม่อีกครั้ง");
-        } finally {
-            setIsSendingOtp(false);
-        }
-    };
-
-    const handleVerifyOtpAndSign = async () => {
-        if (!confirmationResult || !otpCode || !signingRole || !contract || !pendingSignature) return;
-
-        setIsVerifyingOtp(true);
-        try {
-            const result = await confirmationResult.confirm(otpCode);
-            const user = result.user;
-
-            const otpMetadata = {
-                verifiedPhoneNumber: user.phoneNumber || formatPhoneNumber(phoneNumber),
-                authUid: user.uid,
-            };
-
-            await contractService.signContract(id, signingRole, pendingSignature, otpMetadata);
-            
-            setIsDialogOpen(false);
-            setShowConfirmSign(false);
-            setPendingSignature(null);
-            setShowOtpInput(false);
-            setPhoneNumber('');
-            setOtpCode('');
-            setConfirmationResult(null);
-        } catch (error) {
-            console.error('Error verifying OTP:', error);
-            alert("รหัส OTP ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง");
-        } finally {
-            setIsVerifyingOtp(false);
-        }
+    const handleVerifiedSign = async (phoneIdToken: string) => {
+        if (!signingRole || !pendingSignature) throw new Error('ไม่พบลายเซ็น กรุณาเซ็นใหม่อีกครั้ง');
+        await contractService.signContract(id, signingRole, pendingSignature, phoneIdToken);
+        setIsDialogOpen(false);
+        setPendingSignature(null);
     };
 
     const handleDownloadPDF = async () => {
@@ -367,8 +318,12 @@ export default function ContractSigningPage() {
             <div className="min-h-screen flex items-center justify-center bg-slate-50">
                 <div className="text-center space-y-4">
                     <AlertTriangle className="w-12 h-12 text-red-500 mx-auto" />
-                    <h1 className="text-2xl font-bold text-slate-800">ไม่พบสัญญา</h1>
-                    <p className="text-slate-600">สัญญานี้อาจถูกลบหรือไม่มีอยู่ในระบบ</p>
+                    <h1 className="text-2xl font-bold text-slate-800">{accessDenied ? 'ไม่มีสิทธิ์เข้าถึงสัญญานี้' : 'ไม่พบสัญญา'}</h1>
+                    <p className="text-slate-600">
+                        {accessDenied
+                            ? (user ? 'หน้านี้สำหรับเจ้าของสัญญา หากคุณเป็นคู่สัญญา กรุณาเปิดจากลิงก์แชร์ที่ได้รับ' : 'กรุณาเข้าสู่ระบบ หรือเปิดจากลิงก์แชร์ที่ได้รับ')
+                            : 'สัญญานี้อาจถูกลบหรือไม่มีอยู่ในระบบ'}
+                    </p>
                 </div>
             </div>
         );
@@ -1263,88 +1218,15 @@ export default function ContractSigningPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Confirmation Dialog for Signing */}
-            <AlertDialog open={showConfirmSign} onOpenChange={(open) => {
-                setShowConfirmSign(open);
-                if (!open) {
-                    setShowOtpInput(false);
-                    setOtpCode('');
-                    setPhoneNumber('');
-                }
-            }}>
-                <AlertDialogContent className="bg-white border-none shadow-2xl rounded-2xl">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="text-xl font-bold text-slate-900">ยืนยันการเซ็นชื่อด้วยเบอร์โทรศัพท์ (OTP)</AlertDialogTitle>
-                        <AlertDialogDescription className="text-slate-600 text-base">
-                            {!showOtpInput ? 
-                                "กรุณาระบุหมายเลขโทรศัพท์เพื่อรับรหัส OTP ยืนยันตัวตนก่อนบันทึกลายเซ็น ลายเซ็นและเบอร์นี้จะไม่สามารถแก้ไขได้อีกหลังจากกดยืนยัน" :
-                                "กรุณากรอกรหัส OTP 6 หลักที่ได้รับทาง SMS"
-                            }
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    
-                    <div className="py-4 space-y-4">
-                        {!showOtpInput ? (
-                            <div className="space-y-2">
-                                <Label>หมายเลขโทรศัพท์</Label>
-                                <Input 
-                                    placeholder="08X-XXX-XXXX" 
-                                    value={phoneNumber} 
-                                    onChange={(e) => setPhoneNumber(e.target.value)} 
-                                    disabled={isSendingOtp}
-                                />
-                            </div>
-                        ) : (
-                            <div className="space-y-2">
-                                <Label>รหัส OTP</Label>
-                                <Input 
-                                    placeholder="XXXXXX" 
-                                    maxLength={6}
-                                    value={otpCode} 
-                                    onChange={(e) => setOtpCode(e.target.value)} 
-                                    disabled={isVerifyingOtp}
-                                    className="text-center tracking-widest text-lg font-bold"
-                                />
-                            </div>
-                        )}
-                        <div id="recaptcha-container"></div>
-                    </div>
-
-                    <AlertDialogFooter className="mt-6">
-                        <AlertDialogCancel 
-                            className="rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50"
-                            onClick={() => {
-                                setShowOtpInput(false);
-                                setOtpCode('');
-                                setPhoneNumber('');
-                            }}
-                            disabled={isSendingOtp || isVerifyingOtp}
-                        >
-                            ยกเลิก
-                        </AlertDialogCancel>
-                        
-                        {!showOtpInput ? (
-                            <Button 
-                                onClick={handleSendOtp}
-                                disabled={isSendingOtp || !phoneNumber}
-                                className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 shadow-lg shadow-blue-200"
-                            >
-                                {isSendingOtp ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                                รับรหัส OTP
-                            </Button>
-                        ) : (
-                            <Button 
-                                onClick={handleVerifyOtpAndSign}
-                                disabled={isVerifyingOtp || otpCode.length !== 6}
-                                className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 shadow-lg shadow-blue-200"
-                            >
-                                {isVerifyingOtp ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                                ยืนยัน OTP และบันทึก
-                            </Button>
-                        )}
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            {/* OTP ก่อนบันทึกลายเซ็น — ยืนยันบน Firebase instance แยก แล้วให้ server ตรวจเอง */}
+            <OtpSignDialog
+                open={showConfirmSign}
+                onOpenChange={(open) => {
+                    setShowConfirmSign(open);
+                    if (!open) setPendingSignature(null);
+                }}
+                onVerified={handleVerifiedSign}
+            />
 
             {/* e-Signature Information Dialog */}
             <Dialog open={showESignInfo} onOpenChange={setShowESignInfo}>
