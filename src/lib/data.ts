@@ -37,15 +37,7 @@ export async function getApprovedLawyers(db: Firestore): Promise<LawyerProfile[]
   }
 }
 
-export async function getLawyerById(db: Firestore, id: string): Promise<LawyerProfile | undefined> {
-  if (!db) return undefined;
-  const lawyerRef = doc(db, 'lawyerProfiles', id);
-  const docSnap = await getDoc(lawyerRef);
-  if (docSnap.exists()) {
-    return { id: docSnap.id, ...docSnap.data() } as LawyerProfile;
-  }
-  return undefined;
-}
+// getLawyerById ถูกลบ: อ่านเอกสารเต็มของทนายจาก browser — ใช้ getPublicLawyerCardAction แทน
 
 // --- Article Functions ---
 export async function getAllArticles(db: Firestore | null): Promise<Article[]> {
