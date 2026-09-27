@@ -4,7 +4,7 @@
 import React, { useState, useEffect, Suspense, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getLawyerById } from '@/lib/data';
+import { getPublicLawyerCardAction, type PublicLawyerCard } from '@/app/actions/lawyer-public-actions';
 import type { LawyerProfile } from '@/lib/types';
 import { ArrowLeft, CreditCard, Calendar, User, CheckCircle, QrCode, MessageSquare, Pencil, Loader2, Landmark, Upload } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
@@ -41,7 +41,7 @@ function PaymentPageContent() {
     const dateStr = searchParams.get('date');
     const description = searchParams.get('description');
 
-    const [lawyer, setLawyer] = useState<LawyerProfile | null>(null);
+    const [lawyer, setLawyer] = useState<PublicLawyerCard | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isProcessing, setIsProcessing] = useState(false);
     const [paymentSuccess, setPaymentSuccess] = useState(false);
@@ -91,7 +91,8 @@ function PaymentPageContent() {
             }
 
             setIsLoading(true);
-            const lawyerData = await getLawyerById(firestore, lawyerId);
+            // ฟิลด์สาธารณะผ่าน server — rules ไม่ให้ลูกความ getDoc โปรไฟล์ทนายแล้ว
+            const lawyerData = await getPublicLawyerCardAction(lawyerId);
             setLawyer(lawyerData || null);
             setIsLoading(false);
         }
@@ -171,7 +172,7 @@ function PaymentPageContent() {
     // ทุกการชำระเงินจึงเป็นการแจ้งโอนพร้อมสลิปที่รอแอดมินตรวจ — สถานะ 'paid'/'active'
     // ไม่มี path ไหนตั้งเองได้อีกแล้ว เพราะ server เขียน 'pending_payment' อย่างเดียว
     const processPayment = async (isManualTransfer = true) => {
-        const targetLawyerUserId = lawyer?.userId || lawyer?.id;
+        const targetLawyerUserId = lawyer?.id;
         console.log("Starting processPayment", { isManualTransfer, paymentType, user: user?.uid, lawyer: lawyer?.id, targetLawyerUserId });
         setIsProcessing(true);
         if (!firestore || !user || !lawyer) {

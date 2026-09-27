@@ -10,8 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Download, FileText, CheckCircle, Clock, AlertTriangle, ArrowLeft, Printer, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
-import { initializeFirebase } from '@/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { getPublicLawyerCardAction } from '@/app/actions/lawyer-public-actions';
 
 export default function InvoicePage() {
     const params = useParams();
@@ -36,14 +35,11 @@ export default function InvoicePage() {
                     setInvoice(data);
                     setError(null);
 
+                    // ข้อมูลทนายผ่าน server (ฟิลด์สาธารณะเท่านั้น) — rules ไม่ให้ลูกความ getDoc โปรไฟล์ทนายแล้ว
+                    // แยก catch ไว้: ดึงข้อมูลทนายไม่ได้ ใบแจ้งหนี้ต้องยังแสดง
                     if (data.lawyerId) {
-                        const { firestore } = initializeFirebase();
-                        if (firestore) {
-                            const lawyerDoc = await getDoc(doc(firestore, 'lawyerProfiles', data.lawyerId));
-                            if (lawyerDoc.exists()) {
-                                setLawyer(lawyerDoc.data());
-                            }
-                        }
+                        const lawyerCard = await getPublicLawyerCardAction(data.lawyerId).catch(() => null);
+                        if (lawyerCard) setLawyer(lawyerCard);
                     }
                 }
             } catch (err: any) {
