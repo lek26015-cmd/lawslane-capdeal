@@ -7,6 +7,7 @@ import { LandingHero } from '@/components/landing/landing-hero';
 import { FeaturesShowcase } from '@/components/landing/features-showcase';
 import { FeaturesGrid } from '@/components/landing/features-grid';
 import { ContactSection } from '@/components/landing/contact-section';
+import { LawslaneNetworkSection } from '@/components/landing/lawslane-network-section';
 import { PricingCards } from '@/components/pricing/pricing-cards';
 import { initializeFirebase } from '@/firebase';
 // import { HowItWorks } from '@/components/landing/how-it-works';
@@ -51,6 +52,9 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
             <PricingCards />
           </div>
         </section>
+
+        {/* ล่ามกฎหมาย + รับสมัครทนาย/ล่าม (เว็บหลัก Lawslane) */}
+        <LawslaneNetworkSection locale={locale} />
 
         {/* New Contact Section */}
         <ContactSection />

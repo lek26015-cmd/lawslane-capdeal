@@ -950,5 +950,18 @@
         "displayMode": "Display Mode",
         "language": "Language",
         "logout": "Logout"
+    },
+    "LawslaneNetwork": {
+        "bannerTitle": "Legal Interpreters & Translators",
+        "bannerText": "Interpreters for court, police stations, lawyer meetings and legal document translation, with clear prices before you book.",
+        "bannerCta": "Find an interpreter",
+        "joinTitle": "Join Lawslane",
+        "joinText": "We are welcoming lawyers and interpreters ready to serve clients through our online platform.",
+        "lawyerTitle": "Apply as a lawyer",
+        "lawyerText": "Create your lawyer profile and get new cases and clients through Lawslane, with booking and online consultation chat.",
+        "lawyerCta": "Apply as a lawyer",
+        "interpreterTitle": "Apply as a legal interpreter",
+        "interpreterText": "Take court, police station and legal document jobs. Set your own rates and work on-site or online.",
+        "interpreterCta": "Apply as an interpreter"
     }
 }
