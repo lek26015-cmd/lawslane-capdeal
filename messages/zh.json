@@ -983,5 +983,18 @@
         "displayMode": "显示模式",
         "language": "语言",
         "logout": "登出"
+    },
+    "LawslaneNetwork": {
+        "bannerTitle": "法律口译与笔译",
+        "bannerText": "为法院、警察局、律师会谈及法律文件翻译提供口译服务，预订前价格清晰透明。",
+        "bannerCta": "查找翻译员",
+        "joinTitle": "加入 Lawslane",
+        "joinText": "我们正在招募愿意通过在线平台服务客户的律师和翻译员。",
+        "lawyerTitle": "申请成为律师",
+        "lawyerText": "创建律师资料，通过 Lawslane 获得新案件和客户，并提供预约和在线咨询聊天。",
+        "lawyerCta": "申请成为律师",
+        "interpreterTitle": "申请成为法律翻译员",
+        "interpreterText": "承接法院、警察局口译及法律文件翻译，自定价格，可现场或线上工作。",
+        "interpreterCta": "申请成为翻译员"
     }
 }
