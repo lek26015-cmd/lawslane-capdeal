@@ -11,7 +11,14 @@ import { SUBSCRIPTION_PLANS, PlanId, SubscriptionPlan } from '@/lib/subscription
  *
  * ตอนนี้นับใน `usage/{uid}_{YYYY-MM}` (เดือนตามเวลาไทย) ที่เขียนได้เฉพาะ Admin SDK
  *  - deals: จำนวนสัญญาที่สร้าง — ลิมิตตามแพ็กเกจ
- *  - scans: จำนวนครั้งที่เรียก AI อ่านแคป — กันยิงรัวให้เสียค่า AI (ลิมิต = deals × 3, ขั้นต่ำ 10)
+ *  - scans: จำนวนครั้งที่เรียก AI อ่านแคป — กันยิงรัวให้เสียค่า AI (ค่าเริ่มต้น = deals × 3, ขั้นต่ำ 10)
+ *
+ * แอดมินกำหนดได้ที่หลังบ้าน (lawslane-admin → CapDeal → แพ็กเกจและสิทธิ์):
+ *  - `planEntitlements/capdeal` → ลิมิต/ฟีเจอร์ของแต่ละแพ็กเกจ (ไม่มีเอกสาร = ค่าในโค้ด)
+ *  - `users/{uid}.planGrants.capdeal` → มอบแพ็กเกจให้ลูกค้ารายคน (+ วันหมดอายุ)
+ *    ใช้แพ็กเกจที่สูงกว่าระหว่าง Stripe กับที่แอดมินมอบ — มอบให้ลูกค้าที่จ่ายอยู่แล้ว
+ *    จะไม่ทำให้แพ็กเกจลดลง และไม่แตะ users.subscription ที่ webhook ของ Stripe เป็นเจ้าของ
+ *  ทั้งสองที่ client เขียนเองไม่ได้ — โครงข้อมูลต้องตรงกับ lawslane-admin/src/lib/plan-entitlements.ts
  */
 
 // Stripe ถือว่ายังใช้สิทธิ์ได้ระหว่างรอเก็บเงินซ้ำ (past_due) — ไม่ตัดผู้ใช้ทันทีที่บัตรตัดไม่ผ่าน
@@ -55,6 +62,77 @@ export function scanLimitFor(plan: SubscriptionPlan): number {
     return Math.max(plan.limits.dealsPerMonth * 3, 10);
 }
 
+// ลำดับแพ็กเกจจากต่ำไปสูง — ใช้เลือกตัวที่สูงกว่าระหว่าง Stripe กับที่แอดมินมอบ
+const PLAN_ORDER = ['free', 'lite', 'pro', 'scale'];
+
+export type PlanEntitlements = {
+    dealsPerMonth: number;
+    scansPerMonth: number;
+    /** แนบเอกสารท้ายสัญญา */
+    attachments: boolean;
+    /** เอกสาร/PDF ไม่มีลายน้ำ Lawslane */
+    hideWatermark: boolean;
+};
+
+function defaultEntitlements(plan: SubscriptionPlan): PlanEntitlements {
+    return {
+        dealsPerMonth: plan.limits.dealsPerMonth,
+        scansPerMonth: scanLimitFor(plan),
+        attachments: plan.id !== 'free',
+        hideWatermark: plan.id !== 'free',
+    };
+}
+
+function nonNegativeInt(v: unknown): number | null {
+    return typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.floor(v) : null;
+}
+
+/** ค่าที่แอดมินตั้ง — ฟิลด์ที่หาย/ชนิดผิดใช้ค่าเริ่มต้น, scansPerMonth = null คือคำนวณจาก deals */
+function normalizeEntitlements(raw: any, plan: SubscriptionPlan): PlanEntitlements {
+    const base = defaultEntitlements(plan);
+    const deals = nonNegativeInt(raw?.dealsPerMonth) ?? base.dealsPerMonth;
+    return {
+        dealsPerMonth: deals,
+        scansPerMonth: nonNegativeInt(raw?.scansPerMonth) ?? Math.max(deals * 3, 10),
+        attachments: typeof raw?.attachments === 'boolean' ? raw.attachments : base.attachments,
+        hideWatermark: typeof raw?.hideWatermark === 'boolean' ? raw.hideWatermark : base.hideWatermark,
+    };
+}
+
+async function loadPlanConfig(db: FirebaseFirestore.Firestore): Promise<Record<string, any>> {
+    const snap = await db.collection('planEntitlements').doc('capdeal').get().catch(() => null);
+    return snap?.data()?.plans ?? {};
+}
+
+/** แพ็กเกจที่แอดมินมอบ — หมดอายุ/ไม่รู้จักถือว่าไม่มี */
+export function planFromGrant(grant: any, now = Date.now()): { plan: SubscriptionPlan; expiresAt: Date | null } | null {
+    const plan = grant && SUBSCRIPTION_PLANS[grant.planId as PlanId];
+    if (!plan) return null;
+    const expiresAt: Date | null = grant.expiresAt?.toDate?.() ?? null;
+    if (expiresAt && expiresAt.getTime() <= now) return null;
+    return { plan, expiresAt };
+}
+
+type ResolvedPlan = {
+    plan: SubscriptionPlan;
+    source: 'stripe' | 'admin' | 'free';
+    grantExpiresAt: Date | null;
+    entitlements: PlanEntitlements;
+};
+
+function resolvePlan(userData: any, config: Record<string, any>): ResolvedPlan {
+    const paid = planFromSubscription(userData?.subscription);
+    const grant = planFromGrant(userData?.planGrants?.capdeal);
+    const useGrant = grant && PLAN_ORDER.indexOf(grant.plan.id) > PLAN_ORDER.indexOf(paid.id);
+    const plan = useGrant ? grant.plan : paid;
+    return {
+        plan,
+        source: useGrant ? 'admin' : paid.id === 'free' ? 'free' : 'stripe',
+        grantExpiresAt: useGrant ? grant.expiresAt : null,
+        entitlements: normalizeEntitlements(config[plan.id], plan),
+    };
+}
+
 /** เดือนปัจจุบันตามเวลาไทย เช่น "2026-09" */
 export function currentUsagePeriod(now = new Date()): string {
     const bkk = new Date(now.getTime() + 7 * 60 * 60 * 1000);
@@ -69,6 +147,10 @@ export type UsageSummary = {
     planId: PlanId;
     planName: string;
     isPaid: boolean;
+    /** แพ็กเกจมาจากไหน: จ่ายผ่าน Stripe / แอดมินมอบให้ / ไม่มี */
+    planSource: ResolvedPlan['source'];
+    planExpiresAt: string | null;
+    features: { attachments: boolean; hideWatermark: boolean };
     period: string;
     deals: number;
     dealsLimit: number;
@@ -77,18 +159,30 @@ export type UsageSummary = {
 };
 
 export async function getUsageSummary(db: FirebaseFirestore.Firestore, uid: string): Promise<UsageSummary> {
-    const [userSnap, usageSnap] = await Promise.all([db.collection('users').doc(uid).get(), usageRef(db, uid).get()]);
-    const plan = planFromSubscription(userSnap.data()?.subscription);
+    const [userSnap, usageSnap, config] = await Promise.all([
+        db.collection('users').doc(uid).get(),
+        usageRef(db, uid).get(),
+        loadPlanConfig(db),
+    ]);
+    const resolved = resolvePlan(userSnap.data(), config);
     const usage = usageSnap.data() ?? {};
+    return summarize(resolved, currentUsagePeriod(), usage.deals ?? 0, usage.scans ?? 0);
+}
+
+function summarize(resolved: ResolvedPlan, period: string, deals: number, scans: number): UsageSummary {
+    const { plan, entitlements } = resolved;
     return {
         planId: plan.id as PlanId,
         planName: plan.name,
         isPaid: plan.id !== 'free',
-        period: currentUsagePeriod(),
-        deals: usage.deals ?? 0,
-        dealsLimit: plan.limits.dealsPerMonth,
-        scans: usage.scans ?? 0,
-        scansLimit: scanLimitFor(plan),
+        planSource: resolved.source,
+        planExpiresAt: resolved.grantExpiresAt?.toISOString() ?? null,
+        features: { attachments: entitlements.attachments, hideWatermark: entitlements.hideWatermark },
+        period,
+        deals,
+        dealsLimit: entitlements.dealsPerMonth,
+        scans,
+        scansLimit: entitlements.scansPerMonth,
     };
 }
 
@@ -105,15 +199,18 @@ export async function consumeQuota(
     const userRef = db.collection('users').doc(uid);
     const ref = usageRef(db, uid);
     const period = currentUsagePeriod();
+    // ค่าที่แอดมินตั้งอ่านนอก transaction — ไม่ต้องล็อกเอกสาร config ทุกครั้งที่มีคนสร้างสัญญา
+    const config = await loadPlanConfig(db);
 
     return db.runTransaction(async (tx) => {
         const [userSnap, usageSnap] = await Promise.all([tx.get(userRef), tx.get(ref)]);
-        const plan = planFromSubscription(userSnap.data()?.subscription);
+        const resolved = resolvePlan(userSnap.data(), config);
+        const { plan } = resolved;
         const usage = usageSnap.data() ?? {};
         const deals = usage.deals ?? 0;
         const scans = usage.scans ?? 0;
-        const dealsLimit = plan.limits.dealsPerMonth;
-        const scansLimit = scanLimitFor(plan);
+        const dealsLimit = resolved.entitlements.dealsPerMonth;
+        const scansLimit = resolved.entitlements.scansPerMonth;
 
         if (kind === 'deals' && deals >= dealsLimit) {
             throw new QuotaError('deal_quota', `แพ็กเกจ ${plan.name} สร้างสัญญาได้สูงสุด ${dealsLimit} ฉบับต่อเดือน`);
@@ -135,16 +232,12 @@ export async function consumeQuota(
         }, { merge: true });
         extraWrites?.(tx);
 
-        return {
-            planId: plan.id as PlanId,
-            planName: plan.name,
-            isPaid: plan.id !== 'free',
+        return summarize(
+            resolved,
             period,
-            deals: deals + (kind === 'deals' ? 1 : 0),
-            dealsLimit,
-            scans: scans + (kind === 'scans' ? 1 : 0),
-            scansLimit,
-        };
+            deals + (kind === 'deals' ? 1 : 0),
+            scans + (kind === 'scans' ? 1 : 0),
+        );
     });
 }
 

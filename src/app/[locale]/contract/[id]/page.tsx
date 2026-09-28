@@ -59,9 +59,9 @@ export default function ContractSigningPage() {
 
     // Auth & Subscription
     const { user, isUserLoading } = useUser();
-    const { isActive, isLoading: isSubLoading, planId } = useSubscription();
+    const { isActive, isLoading: isSubLoading, planId, features } = useSubscription();
 
-    const hideWatermark = planId && planId !== 'free';
+    const hideWatermark = features.hideWatermark;
 
     const [contract, setContract] = useState<ContractData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -224,8 +224,8 @@ export default function ContractSigningPage() {
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files?.length || !contract || !user) return;
 
-        // Restriction: Only Lite and above can add attachments
-        if (planId === 'free') {
+        // แนบเอกสารได้ตามสิทธิ์ของแพ็กเกจ (แอดมินตั้งได้) — server เช็คซ้ำใน upload-r2
+        if (!features.attachments) {
             alert('กรุณาอัปเกรดเป็นแพ็กเกจ Lite เพื่อเริ่มใช้ฟีเจอร์แนบเอกสารท้ายสัญญา');
             return;
         }

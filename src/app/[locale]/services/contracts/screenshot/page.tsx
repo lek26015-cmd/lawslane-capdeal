@@ -68,7 +68,7 @@ export default function ScreenshotToContractPage() {
     const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
     const [createdContractId, setCreatedContractId] = useState<string | null>(null);
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
-    const { isCapped, plan, isLoading: isSubLoading } = useSubscription();
+    const { isCapped, plan, dealsLimit, isLoading: isSubLoading } = useSubscription();
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
@@ -230,7 +230,7 @@ export default function ScreenshotToContractPage() {
         if (isCapped) {
             toast({
                 title: "ถึงขีดจำกัดแล้ว",
-                description: `แพ็กเกจ ${plan.name} สแกนได้สูงสุด ${plan.limits.dealsPerMonth} ครั้งต่อเดือน`,
+                description: `แพ็กเกจ ${plan.name} สแกนได้สูงสุด ${dealsLimit} ครั้งต่อเดือน`,
                 variant: 'destructive',
             });
             router.push(`/${locale}/pricing`);
@@ -361,7 +361,7 @@ export default function ScreenshotToContractPage() {
         if (isCapped) {
             toast({
                 title: "ถึงขีดจำกัดแล้ว",
-                description: `แพ็กเกจ ${plan.name} สร้างได้สูงสุด ${plan.limits.dealsPerMonth} ครั้งต่อเดือน`,
+                description: `แพ็กเกจ ${plan.name} สร้างได้สูงสุด ${dealsLimit} ครั้งต่อเดือน`,
                 variant: 'destructive',
             });
             router.push(`/${locale}/pricing`);
@@ -955,7 +955,7 @@ export default function ScreenshotToContractPage() {
                                                 if (isCapped && !createdContractId) {
                                                     toast({
                                                         title: "ถึงขีดจำกัดแล้ว",
-                                                        description: `แพ็กเกจ ${plan.name} สร้างได้สูงสุด ${plan.limits.dealsPerMonth} ครั้งต่อเดือน`,
+                                                        description: `แพ็กเกจ ${plan.name} สร้างได้สูงสุด ${dealsLimit} ครั้งต่อเดือน`,
                                                         variant: 'destructive',
                                                     });
                                                     router.push(`/${locale}/pricing`);
