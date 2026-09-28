@@ -34,7 +34,7 @@ export async function uploadToR2(formData: FormData, folder: string = 'uploads')
         throw new Error('Invalid upload destination');
     }
 
-    // ไฟล์แนบท้ายสัญญา: เฉพาะเจ้าของสัญญา และเฉพาะแพ็กเกจที่จ่ายเงิน (เดิมเช็คแค่ใน UI)
+    // ไฟล์แนบท้ายสัญญา: เฉพาะเจ้าของสัญญา และเฉพาะแพ็กเกจที่เปิดสิทธิ์แนบไฟล์ (แอดมินตั้งได้, เดิมเช็คแค่ใน UI)
     const contractMatch = folder.match(/^contracts\/([A-Za-z0-9_-]+)\/attachments$/);
     if (contractMatch) {
         const db = session.adminApp.firestore();
@@ -42,7 +42,7 @@ export async function uploadToR2(formData: FormData, folder: string = 'uploads')
         if (!contractSnap.exists || contractSnap.data()?.ownerId !== session.uid) {
             throw new Error('Invalid upload destination');
         }
-        if (!(await getUsageSummary(db, session.uid)).isPaid) {
+        if (!(await getUsageSummary(db, session.uid)).features.attachments) {
             throw new Error('กรุณาอัปเกรดแพ็กเกจเพื่อแนบเอกสารท้ายสัญญา');
         }
     }

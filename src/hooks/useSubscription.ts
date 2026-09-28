@@ -9,6 +9,9 @@ import { SUBSCRIPTION_PLANS, PlanId } from '@/lib/subscription';
 type Usage = {
     planId: PlanId;
     isPaid: boolean;
+    planSource?: 'stripe' | 'admin' | 'free';
+    planExpiresAt?: string | null;
+    features?: { attachments: boolean; hideWatermark: boolean };
     deals: number;
     dealsLimit: number;
     scans: number;
@@ -57,6 +60,8 @@ export function useSubscription() {
     const plan = SUBSCRIPTION_PLANS[planId] || SUBSCRIPTION_PLANS.free;
     const dealsLimit = usage?.dealsLimit ?? plan.limits.dealsPerMonth;
     const casesThisMonth = usage?.deals ?? 0;
+    // สิทธิ์ฟีเจอร์ตามที่แอดมินตั้งไว้ — ยังโหลดไม่เสร็จให้ถือตามแพ็กเกจ (free = ปิด)
+    const features = usage?.features ?? { attachments: planId !== 'free', hideWatermark: planId !== 'free' };
 
     return {
         profile,
@@ -64,6 +69,9 @@ export function useSubscription() {
         planId,
         casesThisMonth,
         dealsLimit,
+        features,
+        planSource: usage?.planSource ?? 'free',
+        planExpiresAt: usage?.planExpiresAt ?? null,
         scansThisMonth: usage?.scans ?? 0,
         scansLimit: usage?.scansLimit ?? 0,
         isCapped: usage ? usage.deals >= usage.dealsLimit : false,

@@ -13,7 +13,9 @@ import { Link } from '@/navigation';
 
 export function SubscriptionCard() {
     const { user } = useUser();
-    const { plan, casesThisMonth, dealsLimit, isLoading, isActive, planId } = useSubscription();
+    const { plan, casesThisMonth, dealsLimit, isLoading, isActive, planId, planSource, planExpiresAt } = useSubscription();
+    // แพ็กเกจที่แอดมินมอบให้ไม่มี subscription ใน Stripe — Billing Portal เปิดไม่ได้
+    const isAdminGranted = planSource === 'admin';
     const [isPortalLoading, setIsPortalLoading] = useState(false);
     const [isSetupLoading, setIsSetupLoading] = useState(false);
 
@@ -119,10 +121,16 @@ export function SubscriptionCard() {
                             ? "You've reached your monthly limit. Upgrade to continue."
                             : `${dealsLimit - casesThisMonth} deals remaining in your current period.`}
                     </p>
+                    {isAdminGranted && (
+                        <p className="text-xs text-slate-600 pt-1">
+                            แพ็กเกจนี้ได้รับจากทีมงาน Lawslane
+                            {planExpiresAt ? ` ใช้ได้ถึง ${new Date(planExpiresAt).toLocaleDateString('th-TH', { dateStyle: 'medium' })}` : ''}
+                        </p>
+                    )}
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                    {isActive ? (
+                    {isActive && !isAdminGranted ? (
                         <Button
                             onClick={handleManageSubscription}
                             disabled={isPortalLoading}
