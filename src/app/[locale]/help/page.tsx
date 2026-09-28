@@ -41,7 +41,9 @@ function HelpPageContent() {
   }, [ticketIdParam]);
 
   // Get FAQs from translations
-  const faqKeys = [0, 1, 2, 3, 4, 5, 6];
+  // เดิมตายตัว 0–6 แต่ไฟล์แปลมีแค่ 3 ข้อ → ข้อที่ไม่มีโชว์เป็นชื่อคีย์ดิบ
+  const faqCount = (t.raw('faqs') as unknown[] | undefined)?.length ?? 0;
+  const faqKeys = Array.from({ length: faqCount }, (_, i) => i);
   const faqs = faqKeys.map(key => ({
     question: t(`faqs.${key}.question`),
     answer: t(`faqs.${key}.answer`)

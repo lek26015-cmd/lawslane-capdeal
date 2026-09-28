@@ -285,22 +285,24 @@ export default function InvoicePage() {
                                             <p className="text-sm font-bold text-slate-800">Thai QR Payment / PromptPay</p>
                                         </div>
                                         <p className="text-xs text-slate-500 leading-relaxed">
-                                            กรุณาชำระเงินผ่านเมนู "ชำระเงิน" ในหน้าแชท Lawslane เพื่อความปลอดภัยของท่าน เงินของท่านจะถูกเก็บไว้ในระบบ Escrow จนกว่างานจะสำเร็จ
+                                            โอนค่าบริการเข้าบัญชีของทนายโดยตรงตามที่แสดงในห้องแชท Lawslane แล้วกดแจ้งโอน ทนายจะเป็นผู้ยืนยันรับเงิน — Lawslane ไม่ได้รับหรือถือเงินค่าบริการ
                                         </p>
-                                        <Button 
-                                            className="w-full bg-slate-900 hover:bg-black text-white text-xs font-bold py-2 h-auto"
-                                            onClick={() => window.location.href = `https://lawslane.com/th/payment?chatId=${invoice.chatId}&type=case`}
-                                        >
-                                            ดำเนินการชำระเงินทันที
-                                        </Button>
+                                        {invoice.chatId && (
+                                            <Button 
+                                                className="w-full bg-slate-900 hover:bg-black text-white text-xs font-bold py-2 h-auto"
+                                                onClick={() => window.location.href = `https://www.lawslane.com/th/chat/${encodeURIComponent(invoice.chatId)}`}
+                                            >
+                                                ไปที่ห้องแชทเพื่อชำระเงิน
+                                            </Button>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="space-y-4">
                                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Terms & Conditions</h3>
                                     <ul className="text-xs text-slate-500 space-y-2 list-disc pl-4">
                                         <li>เอกสารนี้ออกโดยระบบ Lawslane Capdeal เพื่อใช้ประกอบการเสนอราคาและการชำระเงิน</li>
-                                        <li>ยอดเงินทั้งหมดจะถูกพักไว้ในระบบ Lawslane และจะโอนให้ทนายความเมื่อมีการส่งมอบงานตามงวดที่ตกลงกัน</li>
-                                        <li>กรณีมีข้อพิพาท กรุณาติดต่อฝ่ายสนับสนุนลูกค้าของ Lawslane ทันที</li>
+                                        <li>ลูกความชำระค่าบริการให้ทนายความโดยตรงตามงวดที่ตกลงกัน Lawslane ไม่ได้รับ พัก หรือถือเงินค่าบริการ</li>
+                                        <li>หากมีปัญหา สามารถแจ้งทีมงาน Lawslane เพื่อช่วยประสานงานได้</li>
                                     </ul>
                                 </div>
                             </div>

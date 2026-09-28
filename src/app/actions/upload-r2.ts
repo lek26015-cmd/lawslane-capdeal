@@ -15,7 +15,8 @@ const ALLOWED_CONTENT_TYPES = new Set([
 // จึงเขียน object ไปที่ prefix ไหนก็ได้ใน bucket
 const ALLOWED_FOLDER_PATTERNS: RegExp[] = [
     /^uploads$/,
-    /^payment-slips$/,
+    // payment-slips ถูกถอด — ไม่รับสลิปค่าทนายเข้าแพลตฟอร์มแล้ว (สลิปมีชื่อ/เลขบัญชี และไฟล์ใน
+    // bucket นี้เปิดด้วย R2_PUBLIC_URL)
     /^profile-images$/,
     /^sme-requests$/,
     /^contracts\/[A-Za-z0-9_-]+\/attachments$/,

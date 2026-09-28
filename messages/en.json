@@ -296,7 +296,7 @@
         "loginRequiredDescription": "You must login before reporting an issue",
         "problemTypes": {
             "communication": "Communication problem with lawyer",
-            "payment": "Payment/Escrow problem",
+            "payment": "Payment problem",
             "technical": "System technical problem",
             "quality": "Dissatisfied with service quality",
             "other": "Other"
