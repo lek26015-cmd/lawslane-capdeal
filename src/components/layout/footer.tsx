@@ -42,7 +42,8 @@ export default function Footer({ userRole, domainType = 'main' }: { userRole: st
     { href: `/${locale}/services/contracts/screenshot`, label: t('services.capAndDeal') },
     { href: `https://www.lawslane.com/${locale}/forms`, label: t('services.legalForms') },
     { href: `https://www.lawslane.com/${locale}`, label: t('services.aiAdvisor') },
-    { href: `https://business.lawslane.com/${locale}`, label: t('services.business') },
+    // Business ซ่อนไว้ก่อน — ยังเป็นร่างแยก ไม่รวมกับระบบในเครือจนกว่าจะพร้อม
+    // { href: `https://business.lawslane.com/${locale}`, label: t('services.business') },
   ];
 
   const aboutLinks = [
