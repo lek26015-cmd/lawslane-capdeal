@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Link } from '@/navigation';
 import { ArrowRight } from 'lucide-react';
 import { FadeIn } from '@/components/fade-in';
+import { SilkBackground } from '@/components/silk-background';
 import { useTranslations } from 'next-intl';
 import { motion, useScroll, useTransform } from 'framer-motion';
 
@@ -29,9 +30,7 @@ export function LandingHero() {
             className="relative w-full min-h-[100vh] flex items-start justify-center overflow-hidden bg-[#050b18] pt-32 md:pt-40"
         >
             {/* Background Overlay */}
-            <div className="absolute inset-0 z-0">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(30,58,138,0.15),transparent_70%)]" />
-            </div>
+            <SilkBackground className="z-0" />
 
             {/* Decorative Glows */}
             <div className="absolute top-1/4 -left-24 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px] animate-pulse" />
