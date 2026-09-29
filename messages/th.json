@@ -296,7 +296,7 @@
         "loginRequiredDescription": "คุณต้องเข้าสู่ระบบก่อนแจ้งปัญหา",
         "problemTypes": {
             "communication": "ปัญหาการสื่อสารกับทนาย",
-            "payment": "ปัญหาการชำระเงิน/Escrow",
+            "payment": "ปัญหาการชำระเงิน",
             "technical": "ปัญหาทางเทคนิคของระบบ",
             "quality": "ไม่พอใจคุณภาพบริการ",
             "other": "อื่นๆ"
