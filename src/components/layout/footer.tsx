@@ -50,6 +50,7 @@ export default function Footer({ userRole, domainType = 'main' }: { userRole: st
     { href: `https://www.lawslane.com/${locale}/about`, label: t('about.about') },
     { href: `/${locale}/pricing`, label: t('about.pricing') },
     { href: `https://www.lawslane.com/${locale}/help`, label: t('about.help') },
+    { href: `https://docs.lawslane.com/${locale}`, label: t('about.guide') },
   ];
 
   const legalLinks = [
