@@ -8,7 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { PlanAvatar } from '@/components/plan-avatar';
+import { planTone as toneForPlan } from '@/lib/plan-tone';
+import { useSubscription } from '@/hooks/useSubscription';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, User, Lock, Bell, ShieldAlert, Loader2, X, CreditCard } from 'lucide-react';
@@ -78,6 +80,8 @@ const banks = [
 export default function AccountPage() {
   const { firestore, storage, auth } = useFirebase();
   const { user } = useUser();
+  const { planId, plan } = useSubscription();
+  const planTone = toneForPlan(planId);
   const { toast } = useToast();
   const t = useTranslations('Account');
   const tBanks = useTranslations('Banks');
@@ -426,10 +430,13 @@ export default function AccountPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-6">
-                <Avatar className="w-20 h-20">
-                  <AvatarImage src={profileData.photoURL} />
-                  <AvatarFallback>{profileData.name ? profileData.name.charAt(0) : 'U'}</AvatarFallback>
-                </Avatar>
+                <PlanAvatar
+                  size="lg"
+                  src={profileData.photoURL}
+                  fallback={profileData.name ? profileData.name.charAt(0) : 'U'}
+                  tone={planTone}
+                  label={plan.name}
+                />
                 {isEditingProfile && (
                   <>
                     <input

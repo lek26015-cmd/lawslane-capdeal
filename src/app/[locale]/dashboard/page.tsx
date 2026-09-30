@@ -6,7 +6,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { PlanAvatar } from '@/components/plan-avatar';
+import { planTone as toneForPlan } from '@/lib/plan-tone';
+import { useSubscription } from '@/hooks/useSubscription';
 import { Calendar, Briefcase, FileText, Loader2, Search, MessageSquare, Building, FileUp, HelpCircle, CheckCircle, User, Ticket, Camera, FileSignature } from 'lucide-react';
 import type { Case, UpcomingAppointment, ReportedTicket } from '@/lib/types';
 import { format } from 'date-fns';
@@ -21,6 +23,8 @@ import { contractService } from '@/services/contractService';
 export default function DashboardPage() {
     const router = useRouter();
     const { user, isUserLoading } = useUser();
+    const { planId, plan } = useSubscription();
+    const planTone = toneForPlan(planId);
     const t = useTranslations('Dashboard');
     const tHelp = useTranslations('Help');
     const locale = useLocale();
@@ -169,10 +173,14 @@ export default function DashboardPage() {
                     <div className="lg:col-span-1 space-y-6">
                         <Card className="rounded-3xl shadow-sm border-none">
                             <CardContent className="pt-6 flex flex-col items-center text-center">
-                                <Avatar className="w-20 h-20 mb-4">
-                                    <AvatarImage src={profile?.avatar || user.photoURL || "https://picsum.photos/seed/user-avatar/100/100"} />
-                                    <AvatarFallback>{profile?.name?.charAt(0) || user.displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
-                                </Avatar>
+                                <PlanAvatar
+                                    size="lg"
+                                    className="mb-4"
+                                    src={profile?.avatar || user.photoURL || "https://picsum.photos/seed/user-avatar/100/100"}
+                                    fallback={profile?.name?.charAt(0) || user.displayName?.charAt(0) || user.email?.charAt(0) || ''}
+                                    tone={planTone}
+                                    label={plan.name}
+                                />
                                 <p className="font-semibold text-lg">{profile?.name || user.displayName || user.email}</p>
                                 <p className="text-sm text-muted-foreground mb-4">{user.email}</p>
                                 <Link href={`/${locale}/account`} className="w-full">

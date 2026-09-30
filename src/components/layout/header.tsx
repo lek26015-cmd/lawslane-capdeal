@@ -22,7 +22,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { PlanAvatar } from '@/components/plan-avatar';
+import { planTone as toneForPlan } from '@/lib/plan-tone';
+import { useSubscription } from '@/hooks/useSubscription';
 import { doc, getDoc } from 'firebase/firestore';
 import { getMainLink, getBusinessLink } from '@/lib/domain-utils';
 
@@ -45,6 +47,10 @@ export default function Header({ setUserRole, domainType = 'main' }: { setUserRo
   const isAdmin = role === 'admin' || isSuperUser;
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  // แพลนที่ใช้อยู่จริง (Stripe หรือแอดมินมอบ ตัวที่สูงกว่า) จาก /api/usage — ใช้แสดงวงสีรอบรูปเท่านั้น
+  const { planId, plan } = useSubscription();
+  const planTone = toneForPlan(planId);
 
   useEffect(() => {
     async function fetchRole() {
@@ -194,10 +200,12 @@ export default function Header({ setUserRole, domainType = 'main' }: { setUserRo
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className={cn("flex items-center gap-2 h-11 px-4 rounded-xl", loginButtonClasses)}>
-                      <Avatar className="w-8 h-8">
-                        <AvatarImage src={avatarUrl || undefined} />
-                        <AvatarFallback>{user.displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
-                      </Avatar>
+                      <PlanAvatar
+                        src={avatarUrl}
+                        fallback={user.displayName?.charAt(0) || user.email?.charAt(0) || ''}
+                        tone={planTone}
+                        label={plan.name}
+                      />
                       <span className="hidden lg:inline">{user.displayName || user.email}</span>
                       <ChevronDown className="w-4 h-4 ml-1 opacity-60" />
                     </Button>
@@ -278,10 +286,12 @@ export default function Header({ setUserRole, domainType = 'main' }: { setUserRo
           </div>
           {user ? (
             <Link href="/account">
-              <Avatar className="w-8 h-8 border border-white/20">
-                <AvatarImage src={avatarUrl || undefined} />
-                <AvatarFallback>{user.displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
-              </Avatar>
+              <PlanAvatar
+                src={avatarUrl}
+                fallback={user.displayName?.charAt(0) || user.email?.charAt(0) || ''}
+                tone={planTone}
+                label={plan.name}
+              />
             </Link>
           ) : (
             <Link href="/login">
