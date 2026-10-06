@@ -153,7 +153,7 @@
         "name": "姓名",
         "email": "电子邮件",
         "phone": "电话号码",
-        "phoneValue": "097-227-5494",
+        "phoneValue": "061-645-7327",
         "officeValue": "泰国，孔敬",
         "message": "内容",
         "placeholder": {
@@ -555,7 +555,7 @@
             "subtitle": "Contact Us",
             "email": {
                 "title": "电子邮件",
-                "value": "support@lawslane.com"
+                "value": "lawslanelawyer@gmail.com"
             },
             "phone": {
                 "title": "电话",
@@ -785,7 +785,7 @@
             },
             "support": {
                 "text": "对于过去的发票或财务咨询，请联系",
-                "email": "billing@lawslane.com"
+                "email": "lawslanelawyer@gmail.com"
             },
             "planLabels": {
                 "starter": "Starter — 2,500 泰铢/月",
