@@ -96,7 +96,7 @@ export function ContactSection() {
                                 </div>
                                 <div>
                                     <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Email</p>
-                                    <p className="text-lg font-medium text-slate-900">contact@lawslane.com</p>
+                                    <p className="text-lg font-medium text-slate-900">lawslanelawyer@gmail.com</p>
                                 </div>
                             </FadeIn>
 
