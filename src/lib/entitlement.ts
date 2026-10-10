@@ -1,6 +1,7 @@
 import 'server-only';
 import { FieldValue } from 'firebase-admin/firestore';
 import { SUBSCRIPTION_PLANS, PlanId, SubscriptionPlan } from '@/lib/subscription';
+import { isSubscriptionEntitled, hasLiveSubscription } from '@/lib/capdeal-billing';
 
 /**
  * สิทธิ์แพ็กเกจและโควตา — ตัดสินฝั่ง server เท่านั้น
@@ -21,11 +22,6 @@ import { SUBSCRIPTION_PLANS, PlanId, SubscriptionPlan } from '@/lib/subscription
  *  ทั้งสองที่ client เขียนเองไม่ได้ — โครงข้อมูลต้องตรงกับ lawslane-admin/src/lib/plan-entitlements.ts
  */
 
-// Stripe ถือว่ายังใช้สิทธิ์ได้ระหว่างรอเก็บเงินซ้ำ (past_due) — ไม่ตัดผู้ใช้ทันทีที่บัตรตัดไม่ผ่าน
-const ENTITLED_STATUSES = new Set(['active', 'trialing', 'past_due']);
-// เผื่อ webhook ต่ออายุมาช้า
-const PERIOD_GRACE_MS = 3 * 24 * 60 * 60 * 1000;
-
 export class QuotaError extends Error {
     status: number;
     code: string;
@@ -36,22 +32,9 @@ export class QuotaError extends Error {
     }
 }
 
-export function planIdForPriceId(priceId: string | null | undefined): PlanId | null {
-    if (!priceId) return null;
-    for (const plan of Object.values(SUBSCRIPTION_PLANS)) {
-        if (plan.stripePriceId === priceId || plan.stripeYearlyPriceId === priceId) {
-            return plan.id as PlanId;
-        }
-    }
-    return null;
-}
-
-export function isSubscriptionEntitled(subscription: any): boolean {
-    if (!subscription || !ENTITLED_STATUSES.has(subscription.status)) return false;
-    const end: Date | undefined = subscription.currentPeriodEnd?.toDate?.();
-    // ไม่มีวันหมดอายุ = ข้อมูลเก่าก่อนมีฟิลด์นี้ ยึดตาม status
-    return !end || end.getTime() + PERIOD_GRACE_MS > Date.now();
-}
+// Price → แพลน และการตัดสินว่า subscription ยังให้สิทธิ์ไหม (รวมผ่อนผัน past_due 3 วัน)
+// อยู่ใน capdeal-billing.ts ที่ไม่มี server-only เพื่อให้เทสต์ได้
+export { planIdForPriceId, isSubscriptionEntitled, hasLiveSubscription } from '@/lib/capdeal-billing';
 
 export function planFromSubscription(subscription: any): SubscriptionPlan {
     if (!isSubscriptionEntitled(subscription)) return SUBSCRIPTION_PLANS.free;
@@ -118,6 +101,10 @@ type ResolvedPlan = {
     source: 'stripe' | 'admin' | 'free';
     grantExpiresAt: Date | null;
     entitlements: PlanEntitlements;
+    /** มี subscription ใน Stripe ที่ยังไม่จบ → เปลี่ยน/ยกเลิก/แก้บัตรผ่าน Billing Portal ห้ามสมัครใหม่ */
+    hasStripeSubscription: boolean;
+    /** บัตรตัดไม่ผ่านและยังไม่ได้จ่าย — ให้เว็บแสดงแจ้งเตือน */
+    paymentFailed: boolean;
 };
 
 function resolvePlan(userData: any, config: Record<string, any>): ResolvedPlan {
@@ -130,6 +117,10 @@ function resolvePlan(userData: any, config: Record<string, any>): ResolvedPlan {
         source: useGrant ? 'admin' : paid.id === 'free' ? 'free' : 'stripe',
         grantExpiresAt: useGrant ? grant.expiresAt : null,
         entitlements: normalizeEntitlements(config[plan.id], plan),
+        hasStripeSubscription: hasLiveSubscription(userData?.subscription),
+        paymentFailed: hasLiveSubscription(userData?.subscription)
+            && (userData.subscription.status === 'past_due' || userData.subscription.status === 'unpaid'
+                || Boolean(userData.subscription.paymentFailedAt)),
     };
 }
 
@@ -151,6 +142,8 @@ export type UsageSummary = {
     planSource: ResolvedPlan['source'];
     planExpiresAt: string | null;
     features: { attachments: boolean; hideWatermark: boolean };
+    hasStripeSubscription: boolean;
+    paymentFailed: boolean;
     period: string;
     deals: number;
     dealsLimit: number;
@@ -178,6 +171,8 @@ function summarize(resolved: ResolvedPlan, period: string, deals: number, scans:
         planSource: resolved.source,
         planExpiresAt: resolved.grantExpiresAt?.toISOString() ?? null,
         features: { attachments: entitlements.attachments, hideWatermark: entitlements.hideWatermark },
+        hasStripeSubscription: resolved.hasStripeSubscription,
+        paymentFailed: resolved.paymentFailed,
         period,
         deals,
         dealsLimit: entitlements.dealsPerMonth,

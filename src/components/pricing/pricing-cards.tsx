@@ -11,11 +11,14 @@ import { useRouter } from '@/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useSubscription } from '@/hooks/useSubscription';
+import { openBillingPortal } from '@/lib/billing-client';
 
 export function PricingCards() {
     const { user, isUserLoading } = useUser();
     const router = useRouter();
     const { toast } = useToast();
+    const { hasStripeSubscription } = useSubscription();
     const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null);
     const [isYearly, setIsYearly] = useState(false);
 
@@ -37,6 +40,17 @@ export function PricingCards() {
         if (planId === 'free') {
             router.push('/services/contracts/screenshot');
             setLoadingPlan(null);
+            return;
+        }
+
+        // มีแพ็กเกจที่จ่ายผ่าน Stripe อยู่แล้ว → เปลี่ยนแพ็กเกจที่ Billing Portal (สมัครซ้ำ server ตอบ 409)
+        if (hasStripeSubscription) {
+            try {
+                await openBillingPortal(user);
+            } catch {
+                toast({ title: 'เปิด Billing Portal ไม่สำเร็จ', description: 'กรุณาลองใหม่อีกครั้ง', variant: 'destructive' });
+                setLoadingPlan(null);
+            }
             return;
         }
 
