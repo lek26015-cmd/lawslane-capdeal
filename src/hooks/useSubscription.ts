@@ -12,6 +12,8 @@ type Usage = {
     planSource?: 'stripe' | 'admin' | 'free';
     planExpiresAt?: string | null;
     features?: { attachments: boolean; hideWatermark: boolean };
+    hasStripeSubscription?: boolean;
+    paymentFailed?: boolean;
     deals: number;
     dealsLimit: number;
     scans: number;
@@ -77,6 +79,10 @@ export function useSubscription() {
         isCapped: usage ? usage.deals >= usage.dealsLimit : false,
         isLoading: loading || isUserLoading,
         isActive: usage?.isPaid ?? false,
+        // มี subscription ใน Stripe ที่ยังไม่จบ → ปุ่มต้องพาไป Billing Portal (สมัครใหม่จะได้ 409)
+        hasStripeSubscription: usage?.hasStripeSubscription ?? false,
+        // บัตรตัดไม่ผ่าน — แสดงแจ้งเตือนให้ไปแก้วิธีชำระเงิน
+        paymentFailed: usage?.paymentFailed ?? false,
         refresh,
     };
 }

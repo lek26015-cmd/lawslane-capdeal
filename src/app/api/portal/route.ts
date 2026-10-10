@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
+import { getStripe } from '@/lib/stripe';
 import { initAdmin } from '@/lib/firebase-admin';
 import { requireUser, authErrorResponse, safeOrigin } from '@/lib/auth-guard';
 
@@ -27,14 +27,17 @@ export async function POST(req: Request) {
             return new NextResponse('Customer not found', { status: 404 });
         }
 
-        const session = await stripe.billingPortal.sessions.create({
+        // configuration แยกต่อผลิตภัณฑ์ (PLAN-08 เฟส 1) — ไม่ตั้ง env = ใช้ค่าเริ่มต้นของบัญชี
+        const configuration = process.env.STRIPE_PORTAL_CONFIG_CAPDEAL || undefined;
+        const session = await getStripe().billingPortal.sessions.create({
             customer: userData.subscription.customerId,
             return_url: `${safeOrigin(req.headers.get('origin'))}/account`,
+            ...(configuration ? { configuration } : {}),
         });
 
         return NextResponse.json({ url: session.url });
     } catch (error: any) {
-        console.error('STRIEP_PORTAL_ERROR', error);
+        console.error('STRIPE_PORTAL_ERROR', error?.code ?? '', error?.message ?? 'unknown');
         return new NextResponse('Internal Server Error', { status: 500 });
     }
 }

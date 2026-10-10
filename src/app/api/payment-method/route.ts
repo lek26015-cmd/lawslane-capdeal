@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
+import { getStripe } from '@/lib/stripe';
 import { initAdmin } from '@/lib/firebase-admin';
 import { requireUser, authErrorResponse } from '@/lib/auth-guard';
 
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
         }
 
         // Fetch payment methods from Stripe
-        const paymentMethods = await stripe.paymentMethods.list({
+        const paymentMethods = await getStripe().paymentMethods.list({
             customer: customerId,
             type: 'card',
             limit: 1,
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
             },
         });
     } catch (error: any) {
-        console.error('PAYMENT_METHOD_ERROR', error);
+        console.error('PAYMENT_METHOD_ERROR', error?.code ?? '', error?.message ?? 'unknown');
         return NextResponse.json({ paymentMethod: null });
     }
 }
