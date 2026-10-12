@@ -1,5 +1,6 @@
 import type Stripe from 'stripe';
-import { SUBSCRIPTION_PLANS, PlanId } from '@/lib/subscription';
+import type { PlanId } from '@/lib/subscription';
+import { CapdealPricing, planIdForPriceIdIn } from '@/lib/plan-pricing-core';
 
 /**
  * ตรรกะตัดสินใจเรื่องแพลน CapDeal ที่ไม่แตะ Stripe/Firestore — แยกไว้ให้เทสต์ได้
@@ -26,17 +27,11 @@ export function isCapdealProduct(metadata: Record<string, string> | null | undef
 
 /**
  * Price → แพลน ต้องรู้จัก Price จริงเท่านั้น ไม่รู้จัก = null (ห้ามเดาจาก metadata.planId)
- * (TODO เฟส 2: รู้จัก previousPriceIds จาก planPricing/capdeal ด้วย)
+ * รู้จัก = Price ปัจจุบันใน planPricing/capdeal + previousPriceIds + Price ID ใน env (PLAN-08 เฟส 2)
+ * ตัวเรียกต้องส่งราคากลาง (getCapdealPricing() ฝั่ง server) มาด้วย
  */
-export function planIdForPriceId(priceId: string | null | undefined): PlanId | null {
-    if (!priceId) return null;
-    for (const plan of Object.values(SUBSCRIPTION_PLANS)) {
-        if (plan.id === 'free') continue;
-        if (plan.stripePriceId === priceId || plan.stripeYearlyPriceId === priceId) {
-            return plan.id as PlanId;
-        }
-    }
-    return null;
+export function planIdForPriceId(priceId: string | null | undefined, pricing: CapdealPricing): PlanId | null {
+    return planIdForPriceIdIn(pricing, priceId);
 }
 
 function toMillis(v: any): number | null {

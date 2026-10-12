@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useSubscription } from '@/hooks/useSubscription';
 import { openBillingPortal } from '@/lib/billing-client';
+import { usePlanPricing } from '@/hooks/usePlanPricing';
 
 export function PricingCards() {
     const { user, isUserLoading } = useUser();
@@ -21,6 +22,8 @@ export function PricingCards() {
     const { hasStripeSubscription } = useSubscription();
     const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null);
     const [isYearly, setIsYearly] = useState(false);
+    // ราคาจาก server (ราคากลาง planPricing/capdeal) — ยังไม่โหลด/ไม่มีเอกสาร = ราคาในโค้ด
+    const amounts = usePlanPricing();
 
     const t = useTranslations('HomePage');
 
@@ -113,8 +116,13 @@ export function PricingCards() {
                     const planId = plan.id as PlanId;
                     const localizedFeatures = t.raw(`pricing_tiers.${planId}.features`) as string[];
                     const isPro = planId === 'pro';
-                    const price = isYearly ? plan.yearlyPrice : plan.price;
-                    const monthlyEquivalent = isYearly ? (plan.yearlyPrice / 12) : plan.price;
+                    const serverAmounts = planId === 'free' ? null : amounts[planId as keyof typeof amounts];
+                    // null = แพลน/รอบนี้ไม่เปิดขาย (ตั้งจากหลังบ้าน) → แสดง "–" และกดสมัครไม่ได้
+                    const price: number | null = serverAmounts
+                        ? (isYearly ? serverAmounts.yearly : serverAmounts.monthly)
+                        : (isYearly ? plan.yearlyPrice : plan.price);
+                    const notSold = price === null;
+                    const monthlyEquivalent = price === null ? null : (isYearly ? (price / 12) : price);
 
                     return (
                         <Card
@@ -144,13 +152,13 @@ export function PricingCards() {
                                     <div className="flex items-baseline">
                                         <span className="text-3xl font-bold text-[#0F172A] mr-1">{t('pricing_common.currency')}</span>
                                         <span className="text-5xl font-extrabold text-[#0F172A] tracking-tight">
-                                            {price.toLocaleString()}
+                                            {price === null ? '–' : price.toLocaleString()}
                                         </span>
                                         <span className="text-sm font-medium text-slate-400 ml-2">
                                             {isYearly ? t('pricing_common.year_unit') : t('pricing_common.month_unit')}
                                         </span>
                                     </div>
-                                    {isYearly && (
+                                    {isYearly && monthlyEquivalent !== null && (
                                         <p className="text-xs text-emerald-600 font-medium">
                                             (เฉลี่ยเพียง {monthlyEquivalent.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} {t('pricing_common.currency')} {t('pricing_common.month_unit')})
                                         </p>
@@ -181,7 +189,7 @@ export function PricingCards() {
                             <CardFooter className="px-8 pb-10">
                                 <Button
                                     onClick={() => handleSubscribe(planId)}
-                                    disabled={loadingPlan !== null}
+                                    disabled={loadingPlan !== null || notSold}
                                     className={cn(
                                         "w-full py-7 text-base font-bold rounded-2xl transition-all duration-300 shadow-sm",
                                         isPro
