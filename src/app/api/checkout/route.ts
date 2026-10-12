@@ -7,12 +7,14 @@ import { requireUser, authErrorResponse, safeOrigin } from '@/lib/auth-guard';
 import { hasLiveSubscription } from '@/lib/entitlement';
 import { CAPDEAL_PRODUCT } from '@/lib/capdeal-billing';
 import { consumeRateLimit } from '@/lib/rate-limit';
+import { getCapdealPricing, checkoutPriceIdFor } from '@/lib/plan-pricing';
 
 /**
  * สร้าง Stripe Checkout (หน้าที่ Stripe โฮสต์) สำหรับแพลน CapDeal แล้วคืน URL ให้ browser redirect
  *
  * - ใช้ Checkout ที่ Stripe โฮสต์เท่านั้น (PCI SAQ A) — เลิก embedded + client secret
  * - client ส่งได้แค่ planId/billingInterval/locale ราคาหาเองจาก Price ID ฝั่ง server
+ *   (planPricing/capdeal ใน Firestore ก่อน ไม่มีใช้ env — PLAN-08 เฟส 2)
  * - ไม่ระบุ payment_method_types → ใช้ dynamic payment methods ตามที่เปิดใน Dashboard
  * - metadata ใส่ได้แค่ product/uid/planId/billingInterval (ห้ามชื่อ/อีเมล/เบอร์)
  * - กันสมัครซ้ำ: มี subscription ที่ยังไม่จบ → 409 ไปที่ Billing Portal · มี Checkout ที่ยัง open
@@ -45,7 +47,8 @@ export async function POST(req: NextRequest) {
         if (!plan || plan.id === 'free') {
             return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
         }
-        const priceId = billingInterval === 'year' ? plan.stripeYearlyPriceId : plan.stripePriceId;
+        // Price ปัจจุบันจากราคากลาง planPricing/capdeal ไม่มีใช้ env · ราคา null = ไม่เปิดขายรอบนี้
+        const priceId = checkoutPriceIdFor(await getCapdealPricing(), plan.id, billingInterval);
         if (!priceId) {
             console.error(`Checkout: missing Stripe price for ${plan.id}/${billingInterval}`);
             return NextResponse.json({ error: 'แพ็กเกจนี้ยังไม่เปิดขาย กรุณาลองใหม่ภายหลัง' }, { status: 400 });

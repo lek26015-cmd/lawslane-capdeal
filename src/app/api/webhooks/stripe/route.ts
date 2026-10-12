@@ -5,6 +5,7 @@ import { getStripe } from '@/lib/stripe';
 import { initAdmin } from '@/lib/firebase-admin';
 import { verifyAndClaimEvent, ProductResolution } from '@/lib/stripe-webhook';
 import { writeBillingAlert, emailPaymentFailed } from '@/lib/billing-alerts';
+import { getCapdealPricing } from '@/lib/plan-pricing';
 import {
     CAPDEAL_PRODUCT,
     checkoutFulfillable,
@@ -28,7 +29,8 @@ import {
  *   Lawslane ฯลฯ) ตอบ 200 แล้วข้าม
  * - สถานะ subscription ดึงล่าสุดด้วย subscriptions.retrieve ทุกครั้ง ไม่เชื่อ event.data.object
  *   เพราะ event มาไม่ตามลำดับได้
- * - แพลนมาจาก Price ที่จ่ายจริงเท่านั้น (planIdForPriceId) ไม่รู้จัก = ไม่ให้แพลน + billingAlerts
+ * - แพลนมาจาก Price ที่จ่ายจริงเท่านั้น (planIdForPriceId + ราคากลาง planPricing/capdeal รวม Price เก่า)
+ *   ไม่รู้จัก = ไม่ให้แพลน + billingAlerts
  * - ไม่คืนเงิน/ยกเลิกอัตโนมัติ (key ของเว็บนี้อ่าน Subscriptions ได้อย่างเดียว) — แจ้งแอดมินแทน
  */
 
@@ -346,7 +348,8 @@ async function syncSubscription(
     }
 
     const price = priceOf(sub);
-    const planId = planIdForPriceId(price?.id);
+    // รู้จัก Price เก่า (previousPriceIds) ด้วย — เปลี่ยนราคาแล้วลูกค้าเดิมแพลนไม่หลุด
+    const planId = planIdForPriceId(price?.id, await getCapdealPricing());
     if (!planId) {
         // ห้ามเดาแพลน — ไม่ให้สิทธิ์ แจ้งแอดมิน
         await writeBillingAlert(db, {

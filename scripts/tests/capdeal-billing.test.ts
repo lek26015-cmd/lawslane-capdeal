@@ -10,6 +10,7 @@ process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO = 'price_pro_m';
 process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO_YEARLY = 'price_pro_y';
 process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_SCALE = 'price_scale_m';
 process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_SCALE_YEARLY = '';
+process.env.STRIPE_PORTAL_CONFIG_CAPDEAL = 'bpc_env';
 
 (async () => {
     const b = await import('../../src/lib/capdeal-billing');
@@ -23,14 +24,117 @@ process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_SCALE_YEARLY = '';
     assert.equal(b.isCapdealProduct({}), false, 'ไม่มี product = ไม่ใช่ของเรา (ไม่รองรับ subscription เก่า)');
     assert.equal(b.isCapdealProduct(null), false);
 
-    // Price → แพลน: รู้จักเท่านั้น ห้ามเดา
-    assert.equal(b.planIdForPriceId('price_lite_m'), 'lite');
-    assert.equal(b.planIdForPriceId('price_pro_y'), 'pro');
-    assert.equal(b.planIdForPriceId('price_scale_m'), 'scale');
-    assert.equal(b.planIdForPriceId('price_unknown'), null);
-    assert.equal(b.planIdForPriceId(''), null, 'env ว่างต้องไม่จับคู่กับ price ว่าง');
-    assert.equal(b.planIdForPriceId(null), null);
-    assert.equal(b.resolvePlanFromPrice('price_pro_m'), 'pro');
+    const pp = await import('../../src/lib/plan-pricing-core');
+    const defaults = pp.defaultCapdealPricing();
+
+    // Price → แพลน: รู้จักเท่านั้น ห้ามเดา (ไม่มีเอกสาร planPricing = env เหมือนเฟส 1)
+    assert.equal(b.planIdForPriceId('price_lite_m', defaults), 'lite');
+    assert.equal(b.planIdForPriceId('price_pro_y', defaults), 'pro');
+    assert.equal(b.planIdForPriceId('price_scale_m', defaults), 'scale');
+    assert.equal(b.planIdForPriceId('price_unknown', defaults), null);
+    assert.equal(b.planIdForPriceId('', defaults), null, 'env ว่างต้องไม่จับคู่กับ price ว่าง');
+    assert.equal(b.planIdForPriceId(null, defaults), null);
+    assert.equal(b.resolvePlanFromPrice('price_pro_m', defaults), 'pro');
+
+    // ---- ราคากลาง planPricing/capdeal (PLAN-08 เฟส 2) ----
+    // ไม่มีเอกสาร = ราคาในโค้ด + env (เว็บต้องเหมือนเดิมทุกอย่าง)
+    assert.equal(defaults.source, 'default');
+    assert.deepEqual(pp.publicAmounts(defaults), {
+        lite: { monthly: 159, yearly: 1590 },
+        pro: { monthly: 249, yearly: 2490 },
+        scale: { monthly: 1049, yearly: 10490 },
+    });
+    assert.deepEqual(pp.publicAmounts(defaults), pp.defaultPublicAmounts(), 'ค่าเริ่มต้นฝั่ง browser ตรงกับ server');
+    assert.deepEqual(pp.mergeCapdealPricing(null), defaults);
+    assert.deepEqual(pp.mergeCapdealPricing(undefined), defaults);
+    assert.equal(pp.checkoutPriceIdFor(defaults, 'lite', 'month'), 'price_lite_m');
+    assert.equal(pp.checkoutPriceIdFor(defaults, 'pro', 'year'), 'price_pro_y');
+    assert.equal(pp.checkoutPriceIdFor(defaults, 'scale', 'year'), null, 'env ว่าง = ยังไม่เปิดขาย');
+    assert.equal(pp.checkoutPriceIdFor(defaults, 'free', 'month'), null);
+    assert.equal(pp.checkoutPriceIdFor(defaults, 'enterprise', 'month'), null);
+    assert.equal(defaults.portalConfigId, 'bpc_env');
+
+    // มีเอกสาร: ราคา/Price ปัจจุบันจาก Firestore, Price เก่า + env ยังรู้จัก
+    const doc = {
+        currency: 'thb',
+        plans: {
+            pro: {
+                monthly: 299, yearly: null,
+                stripe: {
+                    productId: 'prod_pro', monthlyPriceId: 'price_pro_m_v2', yearlyPriceId: null,
+                    previousPriceIds: ['price_pro_m_v1', 42, ''],
+                },
+            },
+            lite: { monthly: 'abc', yearly: 1990.5 }, // ชนิดผิด → ค่าเริ่มต้น
+            free: { monthly: 99 }, // planId ที่ไม่ขายผ่าน Stripe ไม่ถูกใช้
+        },
+        portalConfigId: 'bpc_fs',
+        updatedAt: '2026-10-12T00:00:00Z', updatedBy: 'uid_admin',
+    };
+    const merged = pp.mergeCapdealPricing(doc);
+    assert.equal(merged.source, 'firestore');
+    assert.deepEqual(pp.publicAmounts(merged), {
+        lite: { monthly: 159, yearly: 1590 },
+        pro: { monthly: 299, yearly: null },
+        scale: { monthly: 1049, yearly: 10490 },
+    });
+    assert.equal(pp.checkoutPriceIdFor(merged, 'pro', 'month'), 'price_pro_m_v2', 'Firestore ก่อน env');
+    assert.equal(pp.checkoutPriceIdFor(merged, 'pro', 'year'), null, 'yearly = null → ไม่ขาย แม้ env มี Price');
+    assert.equal(pp.checkoutPriceIdFor(merged, 'lite', 'month'), 'price_lite_m', 'ไม่มี stripe ใน Firestore → env');
+    assert.equal(b.planIdForPriceId('price_pro_m_v2', merged), 'pro', 'Price ปัจจุบัน');
+    assert.equal(b.planIdForPriceId('price_pro_m_v1', merged), 'pro', 'Price เก่า (previousPriceIds) ยังจับคู่ได้');
+    assert.equal(b.planIdForPriceId('price_pro_m', merged), 'pro', 'Price ใน env ยังจับคู่ได้');
+    assert.equal(b.planIdForPriceId('price_pro_y', merged), 'pro', 'รายปีเลิกขายแล้วแต่ลูกค้าเดิมยังได้แพลน');
+    assert.equal(b.planIdForPriceId('price_lite_y', merged), 'lite');
+    assert.equal(b.planIdForPriceId('42', merged), null, 'previousPriceIds ชนิดผิดไม่ถูกนับ');
+    assert.equal(b.planIdForPriceId('price_unknown', merged), null, 'ไม่รู้จัก = ไม่ให้แพลน');
+    assert.equal(merged.portalConfigId, 'bpc_fs', 'portal: Firestore ก่อน env');
+    assert.equal(pp.mergeCapdealPricing({ plans: {}, portalConfigId: null }).portalConfigId, 'bpc_env', 'portal: ไม่มีใน Firestore → env');
+    // monthly = null = ไม่ขาย
+    const notSold = pp.mergeCapdealPricing({ plans: { scale: { monthly: null, yearly: null } } });
+    assert.equal(pp.checkoutPriceIdFor(notSold, 'scale', 'month'), null);
+    assert.equal(b.planIdForPriceId('price_scale_m', notSold), 'scale', 'เลิกขายแล้ว subscription เดิมยังได้แพลน');
+    // สกุลเงินผิด → ไม่ใช้ทั้งเอกสาร
+    const origError = console.error;
+    console.error = () => {};
+    try {
+        assert.deepEqual(pp.mergeCapdealPricing({ currency: 'usd', plans: { pro: { monthly: 1 } } }), defaults);
+
+        // ตัวโหลด: แคป 60 วินาที, อ่านไม่ได้ → ค่าเริ่มต้น (ไม่ throw)
+        let t = 0;
+        let calls = 0;
+        let fail = false;
+        const loader = pp.createPricingLoader(async () => {
+            calls++;
+            if (fail) throw Object.assign(new Error('unavailable'), { code: 14 });
+            return doc;
+        }, { now: () => t });
+        const [a1, a2] = await Promise.all([loader.get(), loader.get()]);
+        assert.equal(calls, 1, 'request พร้อมกันอ่านครั้งเดียว');
+        assert.equal(a1, a2);
+        assert.equal(a1.plans.pro.monthly, 299);
+        t = 59_000;
+        await loader.get();
+        assert.equal(calls, 1, 'ยังอยู่ในแคป');
+        t = 60_001;
+        fail = true;
+        const fallback = await loader.get();
+        assert.equal(calls, 2);
+        assert.deepEqual(fallback, defaults, 'Firestore พัง → ค่าเริ่มต้น');
+        assert.equal(pp.checkoutPriceIdFor(fallback, 'pro', 'month'), 'price_pro_m');
+        t = 70_000;
+        await loader.get();
+        assert.equal(calls, 2, 'ผลสำรองแคปสั้น ๆ ไม่ยิงซ้ำทุก request');
+        t = 76_000;
+        fail = false;
+        assert.equal((await loader.get()).plans.pro.monthly, 299, 'หายพังแล้วกลับมาใช้ Firestore');
+        assert.equal(calls, 3);
+        // ไม่มีเอกสาร → ค่าเริ่มต้น
+        const empty = pp.createPricingLoader(async () => null);
+        assert.deepEqual(await empty.get(), defaults);
+    } finally {
+        console.error = origError;
+    }
 
     // checkout ให้สิทธิ์ได้ก็ต่อเมื่อเป็นของเรา + subscription + complete + จ่ายแล้ว
     const okSession = {

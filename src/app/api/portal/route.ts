@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { initAdmin } from '@/lib/firebase-admin';
+import { getCapdealPricing } from '@/lib/plan-pricing';
 import { requireUser, authErrorResponse, safeOrigin } from '@/lib/auth-guard';
 
 export async function POST(req: Request) {
@@ -27,8 +28,9 @@ export async function POST(req: Request) {
             return new NextResponse('Customer not found', { status: 404 });
         }
 
-        // configuration แยกต่อผลิตภัณฑ์ (PLAN-08 เฟส 1) — ไม่ตั้ง env = ใช้ค่าเริ่มต้นของบัญชี
-        const configuration = process.env.STRIPE_PORTAL_CONFIG_CAPDEAL || undefined;
+        // configuration แยกต่อผลิตภัณฑ์: planPricing/capdeal.portalConfigId → env STRIPE_PORTAL_CONFIG_CAPDEAL
+        // → ค่าเริ่มต้นของบัญชี (PLAN-08 เฟส 2)
+        const configuration = (await getCapdealPricing()).portalConfigId || undefined;
         const session = await getStripe().billingPortal.sessions.create({
             customer: userData.subscription.customerId,
             return_url: `${safeOrigin(req.headers.get('origin'))}/account`,
