@@ -6,15 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { CreditCard, Zap, ExternalLink, Loader2, Wallet } from 'lucide-react';
+import { CreditCard, Zap, ExternalLink, Loader2, AlertTriangle } from 'lucide-react';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useUser } from '@/firebase';
 import { Link } from '@/navigation';
+import { authHeaders, openBillingPortal } from '@/lib/billing-client';
 
 export function SubscriptionCard() {
     const { user } = useUser();
-    const { plan, casesThisMonth, dealsLimit, isLoading, isActive, planId, planSource, planExpiresAt } = useSubscription();
-    // แพ็กเกจที่แอดมินมอบให้ไม่มี subscription ใน Stripe — Billing Portal เปิดไม่ได้
+    const { plan, casesThisMonth, dealsLimit, isLoading, isActive, planSource, planExpiresAt, hasStripeSubscription, paymentFailed } = useSubscription();
     const isAdminGranted = planSource === 'admin';
     const [isPortalLoading, setIsPortalLoading] = useState(false);
     const [isSetupLoading, setIsSetupLoading] = useState(false);
@@ -27,21 +27,8 @@ export function SubscriptionCard() {
 
         try {
             setIsPortalLoading(true);
-            // server ดึง uid จาก session เอง ไม่ต้องส่ง userId มา
-            const response = await fetch('/api/portal', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({}),
-            });
-
-            const contentType = response.headers.get('content-type');
-            if (response.ok && contentType && contentType.includes('application/json')) {
-                const { url } = await response.json();
-                window.location.href = url;
-            } else {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Failed to create portal session');
-            }
+            // server ดึง uid จาก token เอง ไม่ต้องส่ง userId มา
+            await openBillingPortal(user);
         } catch (error) {
             console.error('PORTAL_ERROR', error);
         } finally {
@@ -53,7 +40,7 @@ export function SubscriptionCard() {
         if (!user) return;
 
         try {
-            if (isActive) {
+            if (hasStripeSubscription) {
                 // Active subscribers: use billing portal (includes payment method management)
                 await handleManageSubscription();
                 return;
@@ -64,7 +51,7 @@ export function SubscriptionCard() {
             // server ดึง uid และอีเมลจาก session เอง
             const response = await fetch('/api/setup-intent', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...(await authHeaders(user)) },
                 body: JSON.stringify({}),
             });
 
@@ -129,8 +116,20 @@ export function SubscriptionCard() {
                     )}
                 </div>
 
+                {paymentFailed && (
+                    <div className="flex items-start gap-3 rounded-2xl bg-red-50 p-4 text-sm text-red-700">
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                        <p>
+                            ชำระค่าแพ็กเกจรอบล่าสุดไม่สำเร็จ แพ็กเกจจะใช้งานต่อได้อีก 3 วันนับจากวันที่ตัดเงินไม่ผ่าน
+                            กรุณาอัปเดตวิธีชำระเงินที่ Billing Portal
+                        </p>
+                    </div>
+                )}
+
                 <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                    {isActive && !isAdminGranted ? (
+                    {/* มี subscription ใน Stripe อยู่แล้ว (รวมค้างชำระ/แพ็กเกจที่แอดมินมอบทับ) → Billing Portal
+                        ปุ่ม Upgrade จะพาไปสมัครใหม่ซึ่ง server ตอบ 409 */}
+                    {hasStripeSubscription ? (
                         <Button
                             onClick={handleManageSubscription}
                             disabled={isPortalLoading}

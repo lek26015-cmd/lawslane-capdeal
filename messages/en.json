@@ -869,13 +869,13 @@
         },
         "pricing": {
             "title": "Choose the Right Plan for You",
-            "subtitle": "Start free for 14 days. No credit card required.",
+            "subtitle": "Pick the plan that fits your business.",
             "perMonth": "/month",
             "starter": {
                 "title": "Starter",
                 "desc": "Ideal for SMEs and early-stage startups",
                 "price": "฿2,900",
-                "btn": "Try Free for 14 Days",
+                "btn": "Get Started",
                 "f1": "Download 10 B2B templates/month",
                 "f2": "Form-to-Contract generator",
                 "f3": "Supports 1 user account",

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
+import { getStripe } from '@/lib/stripe';
+import { CAPDEAL_PRODUCT } from '@/lib/capdeal-billing';
 import { initAdmin } from '@/lib/firebase-admin';
 import { requireUser, authErrorResponse, safeOrigin } from '@/lib/auth-guard';
 
@@ -31,14 +32,16 @@ export async function POST(req: Request) {
         const userDoc = await adminDb.collection('users').doc(userId).get();
         const userData = userDoc.data();
 
+        const stripe = getStripe();
         let customerId = userData?.subscription?.customerId;
 
         // If user doesn't have a Stripe customer yet, create one
         if (!customerId) {
+            // พารามิเตอร์/idempotencyKey ต้องตรงกับ api/checkout — สร้างพร้อมกันก็ได้ customer เดียว
             const customer = await stripe.customers.create({
-                email: email,
-                metadata: { firebaseUserId: userId },
-            });
+                email: email || undefined,
+                metadata: { product: CAPDEAL_PRODUCT, uid: userId },
+            }, { idempotencyKey: `capdeal-customer-${userId}` });
             customerId = customer.id;
 
             // Save Stripe customerId to Firebase
@@ -52,17 +55,19 @@ export async function POST(req: Request) {
         // Create a Checkout Session in "setup" mode to collect payment method
         const origin = safeOrigin(req.headers.get('origin'));
 
+        // ไม่ระบุ payment_method_types → dynamic payment methods (โหมด setup ต้องระบุ currency แทน)
         const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
             mode: 'setup',
+            currency: 'thb',
             customer: customerId,
+            metadata: { product: CAPDEAL_PRODUCT, uid: userId },
             success_url: `${origin}/account?setup=success`,
             cancel_url: `${origin}/account?setup=cancelled`,
-        });
+        }, { idempotencyKey: `capdeal-setup-${userId}-${Math.floor(Date.now() / (10 * 60 * 1000))}` });
 
         return NextResponse.json({ url: session.url });
     } catch (error: any) {
-        console.error('STRIPE_SETUP_INTENT_ERROR', error);
+        console.error('STRIPE_SETUP_INTENT_ERROR', error?.code ?? '', error?.message ?? 'unknown');
         return new NextResponse('Internal Server Error', { status: 500 });
     }
 }

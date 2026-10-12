@@ -1,87 +1,55 @@
 'use client';
 
-import React, { useCallback, useEffect, useState, Suspense } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
-import {
-    EmbeddedCheckoutProvider,
-    EmbeddedCheckout
-} from '@stripe/react-stripe-js';
+import React, { useEffect, useRef, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useFirebase } from '@/firebase/provider';
-import Link from 'next/link';
+import { useUser } from '@/firebase';
+import { Link } from '@/navigation';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, Loader2, XCircle } from 'lucide-react';
+import { authHeaders, openBillingPortal } from '@/lib/billing-client';
 
+/**
+ * พาไปหน้าชำระเงินที่ Stripe โฮสต์ (PLAN-08 หลักข้อ 1: ห้ามทำฟอร์มบัตรเอง)
+ * server สร้าง/ใช้ Checkout Session เดิมแล้วคืน URL — หน้านี้แค่ redirect
+ */
 function CheckoutContent() {
     const searchParams = useSearchParams();
-    const { user } = useFirebase();
-    const [stripePromise, setStripePromise] = useState<ReturnType<typeof loadStripe> | null>(null);
-    const [clientSecret, setClientSecret] = useState<string | null>(null);
+    const { user, isUserLoading } = useUser();
     const [error, setError] = useState<string | null>(null);
-    const [isKeyConfigured, setIsKeyConfigured] = useState<boolean | null>(null);
-
-    useEffect(() => {
-        const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-        if (!key) {
-            console.error('Stripe publishable key is missing from environment variables');
-            setIsKeyConfigured(false);
-            return;
-        }
-
-        console.log('Initializing Stripe with key starting with:', key.substring(0, 8));
-        setIsKeyConfigured(true);
-
-        loadStripe(key)
-            .then((res) => {
-                if (res) {
-                    setStripePromise(Promise.resolve(res));
-                } else {
-                    setError('Failed to load Stripe payment interface. Please disable any ad-blockers and try again.');
-                }
-            })
-            .catch((err) => {
-                console.error("Stripe load error:", err);
-                setError('Failed to load Stripe.js. Please check your network connection or disable ad-blockers.');
-            });
-    }, []);
+    const [alreadySubscribed, setAlreadySubscribed] = useState(false);
+    const started = useRef(false);
 
     const planId = searchParams.get('planId');
-    const billingInterval = searchParams.get('interval') || 'month';
-
-    const fetchClientSecret = useCallback(async () => {
-        if (!user || !planId) return;
-
-        try {
-            const response = await fetch('/api/checkout', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                // server ดึง uid และอีเมลจาก session เอง — ห้ามให้ client กำหนดว่าใครได้แพลน
-                body: JSON.stringify({
-                    planId,
-                    billingInterval,
-                    locale: window.location.pathname.split('/')[1],
-                }),
-            });
-
-            const data = await response.json();
-            if (data.clientSecret) {
-                setClientSecret(data.clientSecret);
-            } else {
-                setError(data.error || 'Failed to initialize checkout');
-            }
-        } catch (err: any) {
-            console.error('Error fetching client secret:', err);
-            setError('An error occurred. Please try again.');
-        }
-    }, [user, planId, billingInterval]);
+    const billingInterval = searchParams.get('interval') === 'year' ? 'year' : 'month';
 
     useEffect(() => {
-        if (user && planId) {
-            fetchClientSecret();
-        }
-    }, [user, planId, fetchClientSecret]);
+        if (isUserLoading || !user || !planId || started.current) return;
+        started.current = true;
+
+        (async () => {
+            try {
+                const response = await fetch('/api/checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', ...(await authHeaders(user)) },
+                    // server ดึง uid และอีเมลจาก token เอง — ห้ามให้ client กำหนดว่าใครได้แพลน
+                    body: JSON.stringify({
+                        planId,
+                        billingInterval,
+                        locale: window.location.pathname.split('/')[1],
+                    }),
+                });
+                const data = await response.json().catch(() => ({}));
+                if (response.ok && typeof data.url === 'string') {
+                    window.location.assign(data.url);
+                    return;
+                }
+                if (data.code === 'already_subscribed') setAlreadySubscribed(true);
+                setError(typeof data.error === 'string' ? data.error : 'ไม่สามารถเริ่มการชำระเงินได้ กรุณาลองใหม่อีกครั้ง');
+            } catch {
+                setError('ไม่สามารถเริ่มการชำระเงินได้ กรุณาลองใหม่อีกครั้ง');
+            }
+        })();
+    }, [user, isUserLoading, planId, billingInterval]);
 
     if (!planId) {
         return (
@@ -96,58 +64,41 @@ function CheckoutContent() {
         );
     }
 
-    if (error) {
+    if (!isUserLoading && !user) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[50vh] p-4 text-center">
-                <XCircle className="h-12 w-12 text-red-500 mb-4" />
-                <h1 className="text-2xl font-bold text-red-500 mb-2">Error</h1>
-                <p className="mb-6 text-muted-foreground">{error}</p>
-                <Link href="/pricing">
-                    <Button variant="outline">Back to Pricing</Button>
+                <h1 className="text-2xl font-bold mb-4">กรุณาเข้าสู่ระบบก่อนสมัครแพ็กเกจ</h1>
+                <Link href="/login">
+                    <Button>เข้าสู่ระบบ</Button>
                 </Link>
             </div>
         );
     }
 
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] p-4 text-center">
+                <XCircle className="h-12 w-12 text-red-500 mb-4" />
+                <p className="mb-6 text-muted-foreground max-w-md">{error}</p>
+                <div className="flex gap-3">
+                    {alreadySubscribed && user && (
+                        <Button onClick={() => openBillingPortal(user).catch(() => setError('เปิด Billing Portal ไม่สำเร็จ กรุณาลองใหม่'))}>
+                            Billing Portal
+                        </Button>
+                    )}
+                    <Link href="/pricing">
+                        <Button variant="outline">Back to Pricing</Button>
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="container mx-auto py-12 px-4 max-w-4xl">
-            <div className="mb-8">
-                <Link href="/pricing" className="text-sm text-muted-foreground hover:text-primary flex items-center mb-4">
-                    <ChevronLeft className="h-4 w-4 mr-1" /> Back to pricing
-                </Link>
-                <h1 className="text-3xl font-bold">Complete your subscription</h1>
-                <p className="text-muted-foreground mt-2">
-                    Secure payment for your Lawslane CapDeal plan
-                </p>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border p-1 min-h-[600px] flex items-center justify-center">
-                {isKeyConfigured === false ? (
-                    <div className="text-center p-8 text-red-500">
-                        <h2 className="text-xl font-semibold mb-2">Stripe Configuration Error</h2>
-                        <p>Stripe Publishable Key is missing from environment variables.</p>
-                    </div>
-                ) : (stripePromise && clientSecret) ? (
-                    <div id="checkout" className="w-full">
-                        <EmbeddedCheckoutProvider
-                            stripe={stripePromise}
-                            options={{ clientSecret }}
-                        >
-                            <EmbeddedCheckout />
-                        </EmbeddedCheckoutProvider>
-                    </div>
-                ) : (
-                    <div className="flex flex-col items-center gap-4">
-                        <Loader2 className="h-10 w-10 text-primary animate-spin" />
-                        <p className="text-muted-foreground">Preparing checkout...</p>
-                    </div>
-                )}
-            </div>
-
-            <div className="mt-8 text-center text-sm text-muted-foreground">
-                <p>Your payment information is processed securely by Stripe.</p>
-                <p className="mt-1">By continuing, you agree to our terms of service.</p>
-            </div>
+        <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4 p-4 text-center">
+            <Loader2 className="h-10 w-10 text-primary animate-spin" />
+            <p className="text-muted-foreground">กำลังพาไปหน้าชำระเงินของ Stripe...</p>
+            <p className="text-xs text-muted-foreground">Your payment information is processed securely by Stripe.</p>
         </div>
     );
 }

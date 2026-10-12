@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
+import { getStripe } from '@/lib/stripe';
 import { initAdmin } from '@/lib/firebase-admin';
+import { getCapdealPricing } from '@/lib/plan-pricing';
 import { requireUser, authErrorResponse, safeOrigin } from '@/lib/auth-guard';
 
 export async function POST(req: Request) {
@@ -27,14 +28,18 @@ export async function POST(req: Request) {
             return new NextResponse('Customer not found', { status: 404 });
         }
 
-        const session = await stripe.billingPortal.sessions.create({
+        // configuration แยกต่อผลิตภัณฑ์: planPricing/capdeal.portalConfigId → env STRIPE_PORTAL_CONFIG_CAPDEAL
+        // → ค่าเริ่มต้นของบัญชี (PLAN-08 เฟส 2)
+        const configuration = (await getCapdealPricing()).portalConfigId || undefined;
+        const session = await getStripe().billingPortal.sessions.create({
             customer: userData.subscription.customerId,
             return_url: `${safeOrigin(req.headers.get('origin'))}/account`,
+            ...(configuration ? { configuration } : {}),
         });
 
         return NextResponse.json({ url: session.url });
     } catch (error: any) {
-        console.error('STRIEP_PORTAL_ERROR', error);
+        console.error('STRIPE_PORTAL_ERROR', error?.code ?? '', error?.message ?? 'unknown');
         return new NextResponse('Internal Server Error', { status: 500 });
     }
 }

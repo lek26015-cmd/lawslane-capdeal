@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
+import { getStripe } from '@/lib/stripe';
 import { requireUser, authErrorResponse } from '@/lib/auth-guard';
 
+/**
+ * สถานะ Checkout ของผู้เรียกเอง — ใช้แสดงผลที่หน้า checkout/return เท่านั้น ไม่ให้สิทธิ์อะไร
+ * (สิทธิ์มาจาก webhook) และไม่คืนอีเมล/ข้อมูลส่วนตัว
+ */
 export async function GET(req: NextRequest) {
-    const searchParams = req.nextUrl.searchParams;
-    const sessionId = searchParams.get('session_id');
-
-    if (!sessionId) {
+    const sessionId = req.nextUrl.searchParams.get('session_id');
+    if (!sessionId || !/^cs_[A-Za-z0-9_]+$/.test(sessionId)) {
         return NextResponse.json({ error: 'Session ID is required' }, { status: 400 });
     }
 
-    // เดิมไม่ตรวจอะไรเลย → มี session_id ก็ดึงอีเมลผู้ซื้อได้
     let uid: string;
     try {
         ({ uid } = await requireUser());
@@ -19,19 +20,20 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        const session = await getStripe().checkout.sessions.retrieve(sessionId);
 
-        // session ต้องเป็นของผู้เรียกเอง (checkout ฝัง metadata.userId จาก token)
-        if (session.metadata?.userId !== uid) {
+        // session ต้องเป็นของผู้เรียกเอง (checkout ฝัง metadata.uid จาก token)
+        if (session.metadata?.uid !== uid) {
             return NextResponse.json({ error: 'Not found' }, { status: 404 });
         }
 
         return NextResponse.json({
             status: session.status,
-            customer_email: session.customer_details?.email
+            paymentStatus: session.payment_status,
+            planId: session.metadata?.planId ?? null,
         });
     } catch (err: any) {
-        console.error('Error retrieving Stripe session:', err);
+        console.error('Error retrieving Stripe session:', err?.code ?? '', err?.message ?? 'unknown');
         return NextResponse.json({ error: 'Failed to retrieve session' }, { status: 500 });
     }
 }
